@@ -23,6 +23,7 @@ const DEFAULTS = {
   registered: 0,
   available: null,
   is_full: false,
+  turnstile_site_key: null,
 };
 
 export function useEvent() {

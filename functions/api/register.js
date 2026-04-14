@@ -4,7 +4,34 @@ export async function onRequestPost(context) {
   const { request, env } = context;
 
   try {
-    const { attendees } = await request.json();
+    const body = await request.json();
+    const { attendees, turnstileToken, website } = body;
+
+    // Honeypot: bots fill this invisible field
+    if (website && website.trim() !== '') {
+      // Silently pretend success to not tip off bots
+      return jsonResponse({ groupId: 'honeypot', attendees: [] }, 201);
+    }
+
+    // Verify Turnstile if configured
+    if (env.TURNSTILE_SECRET_KEY) {
+      if (!turnstileToken) {
+        return jsonResponse({ error: 'Please complete the security check.' }, 400);
+      }
+      const verifyRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          secret: env.TURNSTILE_SECRET_KEY,
+          response: turnstileToken,
+          remoteip: request.headers.get('CF-Connecting-IP') || '',
+        }),
+      });
+      const verify = await verifyRes.json();
+      if (!verify.success) {
+        return jsonResponse({ error: 'Security check failed. Please try again.' }, 400);
+      }
+    }
 
     if (!Array.isArray(attendees) || attendees.length === 0 || attendees.length > 10) {
       return jsonResponse({ error: 'Please provide between 1 and 10 attendees.' }, 400);

@@ -14,6 +14,7 @@ export async function onRequestGet(context) {
       registered,
       available,
       is_full: max > 0 && registered >= max,
+      turnstile_site_key: env.TURNSTILE_SITE_KEY || null,
     }), {
       headers: {
         'Content-Type': 'application/json',

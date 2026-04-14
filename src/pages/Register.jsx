@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import AttendeeForm from '../components/AttendeeForm';
 import { EVENT } from '../config';
+import { useEvent } from '../hooks/useEvent';
 
 const emptyAttendee = () => ({
   firstName: '',
@@ -15,10 +16,53 @@ const emptyAttendee = () => ({
 
 export default function Register() {
   const navigate = useNavigate();
+  const { event } = useEvent();
   const [attendees, setAttendees] = useState([emptyAttendee()]);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState('');
+  const [honeypot, setHoneypot] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState(null);
+  const turnstileRef = useRef(null);
+  const widgetIdRef = useRef(null);
+
+  // Load Turnstile script and render widget
+  useEffect(() => {
+    if (!event.turnstile_site_key) return;
+
+    const renderWidget = () => {
+      if (!window.turnstile || !turnstileRef.current || widgetIdRef.current) return;
+      widgetIdRef.current = window.turnstile.render(turnstileRef.current, {
+        sitekey: event.turnstile_site_key,
+        callback: (token) => setTurnstileToken(token),
+        'expired-callback': () => setTurnstileToken(null),
+        'error-callback': () => setTurnstileToken(null),
+      });
+    };
+
+    if (window.turnstile) {
+      renderWidget();
+    } else {
+      const existing = document.querySelector('script[src*="challenges.cloudflare.com/turnstile"]');
+      if (existing) {
+        existing.addEventListener('load', renderWidget);
+      } else {
+        const script = document.createElement('script');
+        script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+        script.async = true;
+        script.defer = true;
+        script.onload = renderWidget;
+        document.head.appendChild(script);
+      }
+    }
+
+    return () => {
+      if (widgetIdRef.current && window.turnstile) {
+        try { window.turnstile.remove(widgetIdRef.current); } catch {}
+        widgetIdRef.current = null;
+      }
+    };
+  }, [event.turnstile_site_key]);
 
   const updateAttendee = (index, data) => {
     setAttendees((prev) => prev.map((a, i) => (i === index ? data : a)));
@@ -84,6 +128,8 @@ export default function Register() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          website: honeypot, // honeypot — bots fill this, humans don't
+          turnstileToken,
           attendees: attendees.map((a) => ({
             firstName: a.firstName.trim(),
             lastName: a.lastName.trim(),
@@ -172,6 +218,28 @@ export default function Register() {
             </button>
           )}
 
+          {/* Honeypot - invisible to humans, filled by bots */}
+          <div style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px', overflow: 'hidden' }} aria-hidden="true">
+            <label>
+              Website (leave this empty)
+              <input
+                type="text"
+                name="website"
+                tabIndex="-1"
+                autoComplete="off"
+                value={honeypot}
+                onChange={(e) => setHoneypot(e.target.value)}
+              />
+            </label>
+          </div>
+
+          {/* Turnstile widget */}
+          {event.turnstile_site_key && (
+            <div className="flex justify-center">
+              <div ref={turnstileRef} />
+            </div>
+          )}
+
           {/* Server Error */}
           {serverError && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm animate-fade-in">
@@ -182,7 +250,7 @@ export default function Register() {
           {/* Submit */}
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || (event.turnstile_site_key && !turnstileToken)}
             className="btn-primary w-full py-4 text-lg rounded-2xl"
           >
             {submitting ? (
