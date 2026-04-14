@@ -23,7 +23,7 @@ export default function AttendeeForm({ index, attendee, onChange, onRemove, erro
               {index + 1}
             </div>
             <h3 className="font-semibold text-gray-900">
-              {isPrimary ? 'Your Information' : `Guest ${index}`}
+              Guest {index + 1}
             </h3>
           </div>
           {!isPrimary && (
@@ -75,20 +75,37 @@ export default function AttendeeForm({ index, attendee, onChange, onRemove, erro
             </div>
           </div>
 
-          <div>
-            <label className="label" htmlFor={`email-${index}`}>Email</label>
-            <input
-              id={`email-${index}`}
-              type="email"
-              value={attendee.email}
-              onChange={(e) => handleChange('email', e.target.value)}
-              placeholder="email@example.com"
-              className={`input-field ${errors?.email ? 'border-red-400 focus:border-red-400 focus:ring-red-100' : ''}`}
-              autoComplete="email"
-            />
-            {errors?.email && (
-              <p className="text-red-500 text-xs mt-1">{errors.email}</p>
-            )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="label" htmlFor={`email-${index}`}>Email</label>
+              <input
+                id={`email-${index}`}
+                type="email"
+                value={attendee.email}
+                onChange={(e) => handleChange('email', e.target.value)}
+                placeholder="email@example.com"
+                className={`input-field ${errors?.email ? 'border-red-400 focus:border-red-400 focus:ring-red-100' : ''}`}
+                autoComplete="email"
+              />
+              {errors?.email && (
+                <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+              )}
+            </div>
+            <div>
+              <label className="label" htmlFor={`phone-${index}`}>Phone Number</label>
+              <input
+                id={`phone-${index}`}
+                type="tel"
+                value={attendee.phone}
+                onChange={(e) => handleChange('phone', e.target.value)}
+                placeholder="(555) 123-4567"
+                className={`input-field ${errors?.phone ? 'border-red-400 focus:border-red-400 focus:ring-red-100' : ''}`}
+                autoComplete="tel"
+              />
+              {errors?.phone && (
+                <p className="text-red-500 text-xs mt-1">{errors.phone}</p>
+              )}
+            </div>
           </div>
 
           <GiverArmyField

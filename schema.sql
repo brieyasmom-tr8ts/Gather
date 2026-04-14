@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS attendees (
   first_name TEXT NOT NULL,
   last_name TEXT NOT NULL,
   email TEXT UNIQUE NOT NULL,
+  phone TEXT,
   registration_group_id TEXT NOT NULL,
   giver_army INTEGER NOT NULL DEFAULT 0,
   giver_army_tenure TEXT,

@@ -7,6 +7,7 @@ const emptyAttendee = () => ({
   firstName: '',
   lastName: '',
   email: '',
+  phone: '',
   giverArmy: null,
   giverArmyTenure: '',
 });
@@ -29,7 +30,7 @@ export default function Register() {
   };
 
   const addGuest = () => {
-    if (attendees.length >= 10) return;
+    if (attendees.length >= 2) return;
     setAttendees((prev) => [...prev, emptyAttendee()]);
   };
 
@@ -86,6 +87,7 @@ export default function Register() {
             firstName: a.firstName.trim(),
             lastName: a.lastName.trim(),
             email: a.email.trim().toLowerCase(),
+            phone: a.phone.trim(),
             giverArmy: a.giverArmy || false,
             giverArmyTenure: a.giverArmy ? a.giverArmyTenure : null,
           })),
@@ -153,7 +155,7 @@ export default function Register() {
           ))}
 
           {/* Add Guest */}
-          {attendees.length < 10 && (
+          {attendees.length < 2 && (
             <button
               type="button"
               onClick={addGuest}

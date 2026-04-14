@@ -67,13 +67,14 @@ export async function onRequestPost(context) {
       const ticketId = crypto.randomUUID();
 
       await env.DB.prepare(
-        `INSERT INTO attendees (ticket_id, first_name, last_name, email, registration_group_id, giver_army, giver_army_tenure)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO attendees (ticket_id, first_name, last_name, email, phone, registration_group_id, giver_army, giver_army_tenure)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
       ).bind(
         ticketId,
         a.firstName.trim(),
         a.lastName.trim(),
         a.email.trim().toLowerCase(),
+        a.phone?.trim() || null,
         groupId,
         a.giverArmy ? 1 : 0,
         a.giverArmyTenure || null
