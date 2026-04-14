@@ -3,6 +3,11 @@ export async function sendConfirmationEmail({ attendee, baseUrl, apiKey, fromAdd
   const qrUrl = `${baseUrl}/api/ticket/${attendee.ticket_id}/qr`;
   const ticketUrl = `${baseUrl}/ticket/${attendee.ticket_id}`;
 
+  // Parse from address: "Name <email>" format
+  const fromMatch = fromAddress.match(/^(.+?)\s*<(.+?)>$/);
+  const senderName = fromMatch ? fromMatch[1].trim() : 'GiveSendGo Gala';
+  const senderEmail = fromMatch ? fromMatch[2].trim() : fromAddress;
+
   // Google Calendar link
   const calParams = new URLSearchParams({
     action: 'TEMPLATE',
@@ -23,10 +28,10 @@ export async function sendConfirmationEmail({ attendee, baseUrl, apiKey, fromAdd
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
 
         <!-- Header -->
-        <tr><td style="background:linear-gradient(135deg,#1A1A2E 0%,#2D1B69 100%);padding:40px 32px;text-align:center;">
-          <p style="color:#FCA5A5;font-size:12px;letter-spacing:3px;text-transform:uppercase;margin:0 0 8px;">Your Ticket</p>
+        <tr><td style="background-color:#085078;padding:40px 32px;text-align:center;">
+          <p style="color:#85D8CE;font-size:12px;letter-spacing:3px;text-transform:uppercase;margin:0 0 8px;">Your Ticket</p>
           <h1 style="color:#ffffff;font-size:28px;font-weight:700;margin:0;">GiveSendGo Gala</h1>
-          <p style="color:#D4AF37;font-size:18px;margin:8px 0 0;font-weight:300;">2026</p>
+          <p style="color:#85D8CE;font-size:18px;margin:8px 0 0;font-weight:600;">2026</p>
         </td></tr>
 
         <!-- Body -->
@@ -67,14 +72,14 @@ export async function sendConfirmationEmail({ attendee, baseUrl, apiKey, fromAdd
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr>
               <td align="center" style="padding-bottom:12px;">
-                <a href="${ticketUrl}" style="display:inline-block;background-color:#E8553D;color:#ffffff;text-decoration:none;padding:12px 32px;border-radius:8px;font-size:14px;font-weight:600;">
+                <a href="${ticketUrl}" style="display:inline-block;background-color:#085078;color:#ffffff;text-decoration:none;padding:12px 32px;border-radius:8px;font-size:14px;font-weight:600;">
                   View Your Ticket
                 </a>
               </td>
             </tr>
             <tr>
               <td align="center">
-                <a href="${googleCalUrl}" style="display:inline-block;color:#E8553D;text-decoration:none;font-size:13px;font-weight:500;">
+                <a href="${googleCalUrl}" style="display:inline-block;color:#085078;text-decoration:none;font-size:13px;font-weight:500;">
                   Add to Google Calendar &rarr;
                 </a>
               </td>
@@ -95,17 +100,18 @@ export async function sendConfirmationEmail({ attendee, baseUrl, apiKey, fromAdd
 </body>
 </html>`;
 
-  const response = await fetch('https://api.resend.com/emails', {
+  // Brevo API
+  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${apiKey}`,
+      'api-key': apiKey,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: fromAddress,
-      to: [attendee.email],
+      sender: { name: senderName, email: senderEmail },
+      to: [{ email: attendee.email, name: `${attendee.first_name} ${attendee.last_name}` }],
       subject: `Your GiveSendGo Gala 2026 Ticket - #${ticketDisplayId}`,
-      html,
+      htmlContent: html,
     }),
   });
 

@@ -18,7 +18,7 @@ export async function onRequestPost(context) {
       return jsonResponse({ error: 'Attendee not found' }, 404);
     }
 
-    if (!env.RESEND_API_KEY) {
+    if (!env.BREVO_API_KEY) {
       return jsonResponse({ error: 'Email service not configured' }, 500);
     }
 
@@ -26,8 +26,8 @@ export async function onRequestPost(context) {
     const sent = await sendConfirmationEmail({
       attendee,
       baseUrl,
-      apiKey: env.RESEND_API_KEY,
-      fromAddress: env.EMAIL_FROM || 'GiveSendGo Gala <onboarding@resend.dev>',
+      apiKey: env.BREVO_API_KEY,
+      fromAddress: env.EMAIL_FROM || 'GiveSendGo Gala <gala@giverarmy.com>',
     });
 
     if (sent) {

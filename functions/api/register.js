@@ -89,15 +89,15 @@ export async function onRequestPost(context) {
     }
 
     // Send confirmation emails (non-blocking)
-    if (env.RESEND_API_KEY) {
+    if (env.BREVO_API_KEY) {
       const baseUrl = env.BASE_URL || `https://${request.headers.get('host')}`;
       const emailPromises = createdAttendees.map((attendee) =>
         sendConfirmationEmail({
           attendee,
           baseUrl,
-          apiKey: env.RESEND_API_KEY,
-          fromAddress: env.EMAIL_FROM || 'GiveSendGo Gala <onboarding@resend.dev>',
-        }).catch(() => {}) // Don't fail registration if email fails
+          apiKey: env.BREVO_API_KEY,
+          fromAddress: env.EMAIL_FROM || 'GiveSendGo Gala <gala@giverarmy.com>',
+        }).catch(() => {})
       );
       context.waitUntil(Promise.all(emailPromises));
     }
