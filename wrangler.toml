@@ -6,4 +6,4 @@ pages_build_output_dir = "dist"
 [[d1_databases]]
 binding = "DB"
 database_name = "gala-db"
-database_id = "your-database-id-here"
+database_id = "06464ea3-11a9-4df4-ba0d-0721f2c4230d"
