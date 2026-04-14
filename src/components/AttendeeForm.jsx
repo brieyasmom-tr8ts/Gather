@@ -113,6 +113,21 @@ export default function AttendeeForm({ index, attendee, onChange, onRemove, erro
             giverArmyTenure={attendee.giverArmyTenure}
             onChange={handleGiverArmyChange}
           />
+
+          {/* Photo Consent */}
+          <div className="pt-2 border-t border-gray-100">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={attendee.photoConsent}
+                onChange={(e) => handleChange('photoConsent', e.target.checked)}
+                className="mt-1 w-4 h-4 rounded border-gray-300 text-gala-deep focus:ring-gala-mint"
+              />
+              <span className="text-sm text-gray-600">
+                I consent to being photographed/recorded during the event. Photos and videos may be used for promotional purposes.
+              </span>
+            </label>
+          </div>
         </div>
       </div>
     </div>

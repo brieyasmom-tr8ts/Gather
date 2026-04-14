@@ -13,6 +13,7 @@ export default function Admin() {
   const [sortField, setSortField] = useState('created_at');
   const [sortDir, setSortDir] = useState('desc');
   const [filter, setFilter] = useState('active');
+  const [bulkEmailOpen, setBulkEmailOpen] = useState(false);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -47,9 +48,10 @@ export default function Admin() {
 
   const sortedAttendees = useMemo(() => {
     let filtered = attendees;
-    if (filter === 'active') filtered = attendees.filter((a) => !a.cancelled);
-    else if (filter === 'pending') filtered = attendees.filter((a) => !a.cancelled && !a.checked_in);
+    if (filter === 'active') filtered = attendees.filter((a) => !a.cancelled && !a.is_waitlist);
+    else if (filter === 'pending') filtered = attendees.filter((a) => !a.cancelled && !a.is_waitlist && !a.checked_in);
     else if (filter === 'checked_in') filtered = attendees.filter((a) => !a.cancelled && a.checked_in);
+    else if (filter === 'waitlist') filtered = attendees.filter((a) => !a.cancelled && a.is_waitlist);
     else if (filter === 'cancelled') filtered = attendees.filter((a) => a.cancelled);
     // 'all' shows everything
 
@@ -189,13 +191,16 @@ export default function Admin() {
       <header className="bg-white border-b border-gray-100 sticky top-0 z-20">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <h1 className="text-lg font-bold text-gray-900">Event Dashboard</h1>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
             <Link to="/admin/scanner" className="btn-primary text-sm py-2">
-              <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
-              </svg>
               Scanner
             </Link>
+            <Link to="/admin/settings" className="btn-secondary text-sm py-2">
+              Settings
+            </Link>
+            <button onClick={() => setBulkEmailOpen(true)} className="btn-secondary text-sm py-2">
+              Email All
+            </button>
             <button onClick={handleExport} className="btn-secondary text-sm py-2">
               Export CSV
             </button>
@@ -236,8 +241,9 @@ export default function Admin() {
             <option value="active">Active Tickets</option>
             <option value="pending">Pending Check-In</option>
             <option value="checked_in">Checked In</option>
+            <option value="waitlist">Waitlist</option>
             <option value="cancelled">Cancelled</option>
-            <option value="all">All (incl. cancelled)</option>
+            <option value="all">All</option>
           </select>
         </div>
 
@@ -352,6 +358,102 @@ export default function Admin() {
           {toast.message}
         </div>
       )}
+
+      {bulkEmailOpen && (
+        <BulkEmailModal
+          onClose={() => setBulkEmailOpen(false)}
+          onResult={(msg, type) => showToast(msg, type)}
+        />
+      )}
+    </div>
+  );
+}
+
+function BulkEmailModal({ onClose, onResult }) {
+  const [subject, setSubject] = useState('');
+  const [message, setMessage] = useState('');
+  const [audience, setAudience] = useState('active');
+  const [sending, setSending] = useState(false);
+
+  const send = async () => {
+    if (!subject.trim() || !message.trim()) {
+      onResult('Subject and message required', 'error');
+      return;
+    }
+    if (!confirm(`Send this email to the selected audience?\n\nSubject: ${subject}`)) return;
+
+    setSending(true);
+    try {
+      const res = await fetch('/api/admin/bulk-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subject, message, audience }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        onResult(`Sent to ${data.sent}/${data.total} recipients`);
+        onClose();
+      } else {
+        onResult(data.error || 'Send failed', 'error');
+      }
+    } catch {
+      onResult('Send failed', 'error');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-40 bg-black/50 flex items-center justify-center p-4 animate-fade-in">
+      <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-gray-900">Email All Attendees</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div className="p-6 space-y-4">
+          <div>
+            <label className="label">Audience</label>
+            <select value={audience} onChange={(e) => setAudience(e.target.value)} className="input-field">
+              <option value="active">Active Tickets</option>
+              <option value="pending">Pending Check-In</option>
+              <option value="checked_in">Checked In</option>
+              <option value="waitlist">Waitlist</option>
+              <option value="all">Everyone (not cancelled)</option>
+            </select>
+          </div>
+          <div>
+            <label className="label">Subject</label>
+            <input
+              type="text"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              placeholder="Important update about the Gala"
+              className="input-field"
+            />
+          </div>
+          <div>
+            <label className="label">Message</label>
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Hi everyone, ..."
+              rows={8}
+              className="input-field"
+            />
+            <p className="text-xs text-gray-400 mt-1">Line breaks will be preserved.</p>
+          </div>
+        </div>
+        <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
+          <button onClick={onClose} className="btn-secondary">Cancel</button>
+          <button onClick={send} disabled={sending} className="btn-primary">
+            {sending ? 'Sending...' : 'Send Email'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

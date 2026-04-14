@@ -12,7 +12,7 @@ export async function onRequestGet(context) {
     }
 
     const attendees = await env.DB.prepare(
-      'SELECT ticket_id, first_name, last_name, email, giver_army, giver_army_tenure, checked_in FROM attendees WHERE registration_group_id = ?'
+      'SELECT ticket_id, first_name, last_name, email, giver_army, giver_army_tenure, checked_in, is_waitlist FROM attendees WHERE registration_group_id = ?'
     ).bind(groupId).all();
 
     return jsonResponse({

@@ -28,6 +28,7 @@ export async function onRequestPost(context) {
       baseUrl,
       apiKey: env.BREVO_API_KEY,
       fromAddress: env.EMAIL_FROM || 'GiveSendGo Gala <gala@giverarmy.com>',
+      db: env.DB,
     });
 
     if (sent) {

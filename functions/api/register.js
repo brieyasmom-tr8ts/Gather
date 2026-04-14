@@ -6,7 +6,6 @@ export async function onRequestPost(context) {
   try {
     const { attendees } = await request.json();
 
-    // Validate input
     if (!Array.isArray(attendees) || attendees.length === 0 || attendees.length > 10) {
       return jsonResponse({ error: 'Please provide between 1 and 10 attendees.' }, 400);
     }
@@ -30,11 +29,17 @@ export async function onRequestPost(context) {
       emails.add(a.email.toLowerCase());
     }
 
-    // Check capacity
-    if (env.MAX_ATTENDEES && parseInt(env.MAX_ATTENDEES) > 0) {
-      const { count } = await env.DB.prepare('SELECT COUNT(*) as count FROM attendees').first();
-      if (count + attendees.length > parseInt(env.MAX_ATTENDEES)) {
-        return jsonResponse({ error: 'Sorry, the event has reached capacity.' }, 400);
+    // Check capacity from event_settings
+    const settings = await env.DB.prepare('SELECT max_attendees FROM event_settings WHERE id = 1').first();
+    const maxAttendees = settings?.max_attendees || 0;
+    let isWaitlist = false;
+
+    if (maxAttendees > 0) {
+      const { count } = await env.DB.prepare(
+        'SELECT COUNT(*) as count FROM attendees WHERE cancelled = 0 AND is_waitlist = 0'
+      ).first();
+      if (count + attendees.length > maxAttendees) {
+        isWaitlist = true;
       }
     }
 
@@ -42,7 +47,7 @@ export async function onRequestPost(context) {
     const emailList = attendees.map((a) => a.email.toLowerCase());
     const placeholders = emailList.map(() => '?').join(',');
     const existing = await env.DB.prepare(
-      `SELECT email FROM attendees WHERE email IN (${placeholders})`
+      `SELECT email FROM attendees WHERE email IN (${placeholders}) AND cancelled = 0`
     ).bind(...emailList).all();
 
     if (existing.results.length > 0) {
@@ -53,22 +58,20 @@ export async function onRequestPost(context) {
       }, 409);
     }
 
-    // Create registration group
     const groupId = crypto.randomUUID();
 
     await env.DB.prepare(
       'INSERT INTO registrations (group_id, total_attendees) VALUES (?, ?)'
     ).bind(groupId, attendees.length).run();
 
-    // Create attendees
     const createdAttendees = [];
 
     for (const a of attendees) {
       const ticketId = crypto.randomUUID();
 
       await env.DB.prepare(
-        `INSERT INTO attendees (ticket_id, first_name, last_name, email, phone, registration_group_id, giver_army, giver_army_tenure)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO attendees (ticket_id, first_name, last_name, email, phone, registration_group_id, giver_army, giver_army_tenure, photo_consent, is_waitlist)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).bind(
         ticketId,
         a.firstName.trim(),
@@ -77,7 +80,9 @@ export async function onRequestPost(context) {
         a.phone?.trim() || null,
         groupId,
         a.giverArmy ? 1 : 0,
-        a.giverArmyTenure || null
+        a.giverArmyTenure || null,
+        a.photoConsent !== false ? 1 : 0,
+        isWaitlist ? 1 : 0
       ).run();
 
       createdAttendees.push({
@@ -85,11 +90,12 @@ export async function onRequestPost(context) {
         first_name: a.firstName.trim(),
         last_name: a.lastName.trim(),
         email: a.email.trim().toLowerCase(),
+        is_waitlist: isWaitlist,
       });
     }
 
-    // Send confirmation emails (non-blocking)
-    if (env.BREVO_API_KEY) {
+    // Send confirmation emails (only for non-waitlist)
+    if (env.BREVO_API_KEY && !isWaitlist) {
       const baseUrl = env.BASE_URL || `https://${request.headers.get('host')}`;
       const emailPromises = createdAttendees.map((attendee) =>
         sendConfirmationEmail({
@@ -97,12 +103,13 @@ export async function onRequestPost(context) {
           baseUrl,
           apiKey: env.BREVO_API_KEY,
           fromAddress: env.EMAIL_FROM || 'GiveSendGo Gala <gala@giverarmy.com>',
+          db: env.DB,
         }).catch(() => {})
       );
       context.waitUntil(Promise.all(emailPromises));
     }
 
-    return jsonResponse({ groupId, attendees: createdAttendees }, 201);
+    return jsonResponse({ groupId, attendees: createdAttendees, waitlist: isWaitlist }, 201);
   } catch (err) {
     console.error('Registration error:', err);
     return jsonResponse({ error: 'Registration failed. Please try again.' }, 500);

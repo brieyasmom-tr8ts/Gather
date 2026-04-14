@@ -10,6 +10,7 @@ const emptyAttendee = () => ({
   phone: '',
   giverArmy: null,
   giverArmyTenure: '',
+  photoConsent: true,
 });
 
 export default function Register() {
@@ -90,6 +91,7 @@ export default function Register() {
             phone: a.phone.trim(),
             giverArmy: a.giverArmy || false,
             giverArmyTenure: a.giverArmy ? a.giverArmyTenure : null,
+            photoConsent: a.photoConsent !== false,
           })),
         }),
       });

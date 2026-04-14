@@ -4,14 +4,18 @@ export async function onRequestGet(context) {
   try {
     const result = await env.DB.prepare(
       `SELECT a.ticket_id, a.first_name, a.last_name, a.email, a.phone, a.giver_army, a.giver_army_tenure,
-              a.checked_in, a.checked_in_at, a.created_at, a.registration_group_id
+              a.photo_consent, a.is_waitlist, a.checked_in, a.checked_in_at, a.cancelled, a.cancelled_at,
+              a.created_at, a.registration_group_id
        FROM attendees a ORDER BY a.created_at DESC`
     ).all();
 
     const headers = [
       'Ticket ID', 'First Name', 'Last Name', 'Email', 'Phone',
       'Giver Army', 'Giver Army Tenure',
-      'Checked In', 'Checked In At', 'Registered At', 'Group ID',
+      'Photo Consent', 'Waitlist',
+      'Checked In', 'Checked In At',
+      'Cancelled', 'Cancelled At',
+      'Registered At', 'Group ID',
     ];
 
     const rows = result.results.map((r) => [
@@ -22,8 +26,12 @@ export async function onRequestGet(context) {
       escapeCsv(r.phone || ''),
       r.giver_army ? 'Yes' : 'No',
       r.giver_army_tenure || '',
+      r.photo_consent ? 'Yes' : 'No',
+      r.is_waitlist ? 'Yes' : 'No',
       r.checked_in ? 'Yes' : 'No',
       r.checked_in_at || '',
+      r.cancelled ? 'Yes' : 'No',
+      r.cancelled_at || '',
       r.created_at,
       r.registration_group_id,
     ]);

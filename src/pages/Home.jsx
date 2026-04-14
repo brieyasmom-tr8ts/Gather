@@ -1,39 +1,96 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { EVENT } from '../config';
+import { useEvent } from '../hooks/useEvent';
+
+function useCountdown(isoStart) {
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  if (!isoStart) return null;
+  const target = new Date(isoStart).getTime();
+  if (isNaN(target)) return null;
+
+  const diff = target - now;
+  if (diff <= 0) return null;
+
+  const days = Math.floor(diff / 86400000);
+  const hours = Math.floor((diff % 86400000) / 3600000);
+  const minutes = Math.floor((diff % 3600000) / 60000);
+  const seconds = Math.floor((diff % 60000) / 1000);
+
+  return { days, hours, minutes, seconds };
+}
 
 export default function Home() {
+  const { event } = useEvent();
+  const countdown = useCountdown(event.iso_start);
+
   return (
     <div className="min-h-screen">
-      {/* Hero - solid bold background */}
-      <section className="min-h-screen flex items-center justify-center bg-gala-deep">
-        <div className="text-center px-6 max-w-3xl mx-auto animate-fade-in">
+      {/* Hero */}
+      <section className="min-h-screen flex items-center justify-center bg-gala-deep py-20">
+        <div className="text-center px-6 max-w-4xl mx-auto animate-fade-in">
           <div className="inline-block bg-gala-mint text-gala-deep text-sm font-bold uppercase tracking-[0.2em] px-5 py-2 rounded-full mb-8">
             You&rsquo;re Invited
           </div>
 
           <h1 className="text-6xl md:text-8xl lg:text-9xl font-extrabold text-white mb-6 tracking-tight">
-            {EVENT.name}
+            {event.name}
           </h1>
 
           <p className="text-4xl md:text-5xl text-gala-mint font-bold mb-10">
-            {EVENT.year}
+            {event.year}
           </p>
 
           <p className="text-xl md:text-2xl text-white mb-10 font-medium">
-            {EVENT.tagline}
+            {event.tagline}
           </p>
 
-          <div className="bg-white/10 backdrop-blur-sm rounded-2xl inline-block px-8 py-5 mb-12">
-            <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-6 text-white text-lg font-medium">
-              <span>{EVENT.date}</span>
+          {/* Countdown */}
+          {countdown && (
+            <div className="mb-10">
+              <p className="text-gala-mint text-sm uppercase tracking-widest font-semibold mb-4">
+                Counting Down
+              </p>
+              <div className="flex justify-center gap-3 md:gap-6">
+                <CountBox value={countdown.days} label="Days" />
+                <CountBox value={countdown.hours} label="Hours" />
+                <CountBox value={countdown.minutes} label="Min" />
+                <CountBox value={countdown.seconds} label="Sec" />
+              </div>
+            </div>
+          )}
+
+          <div className="bg-white/10 backdrop-blur-sm rounded-2xl inline-block px-6 sm:px-8 py-5 mb-10">
+            <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-6 text-white text-base sm:text-lg font-medium">
+              <span>{event.event_date}</span>
               <span className="hidden sm:block text-gala-mint">|</span>
-              <span>{EVENT.time}</span>
+              <span>{event.event_time}</span>
               <span className="hidden sm:block text-gala-mint">|</span>
-              <span>{EVENT.location}</span>
+              <span>{event.location}</span>
             </div>
           </div>
 
-          <div className="block">
+          {/* Ticket availability */}
+          {event.max_attendees > 0 && event.available !== null && (
+            <div className="mb-8">
+              {event.is_full ? (
+                <p className="text-gala-mint text-lg font-semibold">
+                  Event is full &mdash; join the waitlist below
+                </p>
+              ) : (
+                <p className="text-white/80 text-sm">
+                  <span className="text-gala-mint font-bold">{event.available}</span> {event.available === 1 ? 'spot' : 'spots'} remaining
+                </p>
+              )}
+            </div>
+          )}
+
+          <div>
             <Link
               to="/register"
               className="inline-flex items-center gap-3 bg-gala-mint text-gala-deep
@@ -42,7 +99,7 @@ export default function Home() {
                          transform hover:scale-105 active:scale-[0.98]
                          transition-all duration-200 ease-out"
             >
-              Reserve Your Spot
+              {event.is_full ? 'Join Waitlist' : 'Reserve Your Spot'}
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
               </svg>
@@ -51,16 +108,18 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Event Details - clean white with bold blocks */}
+      {/* Event Details */}
       <section className="py-20 px-6 bg-white">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-extrabold text-gala-deep mb-6">
               An Evening to Remember
             </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
-              {EVENT.description}
-            </p>
+            {event.description && (
+              <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
+                {event.description}
+              </p>
+            )}
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
@@ -71,8 +130,8 @@ export default function Home() {
                 </svg>
               }
               title="Date & Time"
-              line1={EVENT.date}
-              line2={EVENT.time}
+              line1={event.event_date}
+              line2={event.event_time}
             />
             <DetailCard
               icon={
@@ -82,22 +141,22 @@ export default function Home() {
                 </svg>
               }
               title="Location"
-              line1={EVENT.location}
-              line2={EVENT.address}
+              line1={event.location}
+              line2={event.address}
             />
             <DetailCard
               icon={
                 <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 7.5L7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5" />
                 </svg>
               }
-              title="Admission"
-              line1="Complimentary"
-              line2="RSVP Required"
+              title="Dress Code"
+              line1={event.dress_code}
+              line2="Come dressed to celebrate"
             />
           </div>
 
-          <div className="text-center mt-16">
+          <div className="text-center mt-16 space-x-4">
             <Link
               to="/register"
               className="inline-flex items-center justify-center text-lg px-10 py-4 rounded-full
@@ -107,6 +166,15 @@ export default function Home() {
             >
               Register Now
             </Link>
+            <Link
+              to="/faq"
+              className="inline-flex items-center justify-center text-lg px-8 py-4 rounded-full
+                         bg-white text-gala-deep font-bold border-2 border-gala-deep
+                         hover:bg-gala-mint/10
+                         active:scale-[0.98] transition-all duration-200 ease-out"
+            >
+              FAQ
+            </Link>
           </div>
         </div>
       </section>
@@ -114,9 +182,24 @@ export default function Home() {
       {/* Footer */}
       <footer className="py-8 px-6 bg-gala-deep">
         <div className="max-w-4xl mx-auto text-center text-sm text-white/60">
-          <p>&copy; {new Date().getFullYear()} GiveSendGo. All rights reserved.</p>
+          <Link to="/faq" className="hover:text-white">FAQ</Link>
+          <span className="mx-3">&middot;</span>
+          <span>&copy; {new Date().getFullYear()} GiveSendGo. All rights reserved.</span>
         </div>
       </footer>
+    </div>
+  );
+}
+
+function CountBox({ value, label }) {
+  return (
+    <div className="bg-white/10 backdrop-blur-sm rounded-xl px-3 py-3 md:px-5 md:py-4 min-w-[70px] md:min-w-[90px]">
+      <div className="text-3xl md:text-5xl font-extrabold text-white tabular-nums">
+        {String(value).padStart(2, '0')}
+      </div>
+      <div className="text-xs md:text-sm text-gala-mint uppercase tracking-wider mt-1 font-semibold">
+        {label}
+      </div>
     </div>
   );
 }
