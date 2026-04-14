@@ -19,6 +19,8 @@ CREATE TABLE IF NOT EXISTS attendees (
   giver_army_tenure TEXT,
   checked_in INTEGER NOT NULL DEFAULT 0,
   checked_in_at TEXT,
+  cancelled INTEGER NOT NULL DEFAULT 0,
+  cancelled_at TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (registration_group_id) REFERENCES registrations(group_id)
 );

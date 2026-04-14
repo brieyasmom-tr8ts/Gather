@@ -12,6 +12,7 @@ export default function Admin() {
   const [toast, setToast] = useState(null);
   const [sortField, setSortField] = useState('created_at');
   const [sortDir, setSortDir] = useState('desc');
+  const [filter, setFilter] = useState('active');
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -45,7 +46,14 @@ export default function Admin() {
   }, [fetchData]);
 
   const sortedAttendees = useMemo(() => {
-    const sorted = [...attendees].sort((a, b) => {
+    let filtered = attendees;
+    if (filter === 'active') filtered = attendees.filter((a) => !a.cancelled);
+    else if (filter === 'pending') filtered = attendees.filter((a) => !a.cancelled && !a.checked_in);
+    else if (filter === 'checked_in') filtered = attendees.filter((a) => !a.cancelled && a.checked_in);
+    else if (filter === 'cancelled') filtered = attendees.filter((a) => a.cancelled);
+    // 'all' shows everything
+
+    const sorted = [...filtered].sort((a, b) => {
       let aVal, bVal;
       if (sortField === 'name') {
         aVal = `${a.first_name} ${a.last_name}`.toLowerCase();
@@ -67,7 +75,7 @@ export default function Admin() {
       return 0;
     });
     return sorted;
-  }, [attendees, sortField, sortDir]);
+  }, [attendees, sortField, sortDir, filter]);
 
   const toggleSort = (field) => {
     if (sortField === field) {
@@ -115,25 +123,27 @@ export default function Admin() {
     }
   };
 
-  const handleDelete = async (attendee) => {
-    if (!confirm(`Cancel ticket for ${attendee.first_name} ${attendee.last_name}?\n\nThis cannot be undone.`)) return;
+  const handleCancel = async (attendee) => {
+    const isCancelled = attendee.cancelled;
+    const action = isCancelled ? 'Restore' : 'Cancel';
+    if (!confirm(`${action} ticket for ${attendee.first_name} ${attendee.last_name}?`)) return;
 
     setDeleting(attendee.id);
     try {
       const res = await fetch('/api/admin/delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ attendeeId: attendee.id }),
+        body: JSON.stringify({ attendeeId: attendee.id, cancel: !isCancelled }),
       });
       if (res.status === 401) { navigate('/admin/login'); return; }
       if (res.ok) {
-        showToast('Ticket cancelled');
+        showToast(isCancelled ? 'Ticket restored' : 'Ticket cancelled');
         fetchData();
       } else {
-        showToast('Failed to cancel', 'error');
+        showToast('Failed to update', 'error');
       }
     } catch {
-      showToast('Failed to cancel', 'error');
+      showToast('Failed to update', 'error');
     } finally {
       setDeleting(null);
     }
@@ -204,9 +214,9 @@ export default function Admin() {
           </div>
         )}
 
-        {/* Search */}
-        <div className="mb-6">
-          <div className="relative">
+        {/* Search + Filter */}
+        <div className="mb-6 flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
             <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
             </svg>
@@ -218,6 +228,17 @@ export default function Admin() {
               className="input-field pl-12"
             />
           </div>
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            className="input-field sm:w-48"
+          >
+            <option value="active">Active Tickets</option>
+            <option value="pending">Pending Check-In</option>
+            <option value="checked_in">Checked In</option>
+            <option value="cancelled">Cancelled</option>
+            <option value="all">All (incl. cancelled)</option>
+          </select>
         </div>
 
         {/* Attendee Table */}
@@ -236,9 +257,11 @@ export default function Admin() {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {sortedAttendees.map((a) => (
-                  <tr key={a.id} className="hover:bg-gray-50/50 transition-colors">
+                  <tr key={a.id} className={`hover:bg-gray-50/50 transition-colors ${a.cancelled ? 'opacity-60' : ''}`}>
                     <td className="px-6 py-4">
-                      <p className="font-medium text-gray-900">{a.first_name} {a.last_name}</p>
+                      <p className={`font-medium ${a.cancelled ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
+                        {a.first_name} {a.last_name}
+                      </p>
                       <p className="text-sm text-gray-400 md:hidden">{a.email}</p>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500 hidden md:table-cell">{a.email}</td>
@@ -253,7 +276,12 @@ export default function Admin() {
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500 hidden lg:table-cell">{formatDate(a.created_at)}</td>
                     <td className="px-6 py-4 text-center">
-                      {a.checked_in ? (
+                      {a.cancelled ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-red-700 bg-red-50 px-2.5 py-1 rounded-full">
+                          <span className="w-1.5 h-1.5 bg-red-500 rounded-full" />
+                          Cancelled
+                        </span>
+                      ) : a.checked_in ? (
                         <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-2.5 py-1 rounded-full">
                           <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
                           Checked In
@@ -267,7 +295,7 @@ export default function Admin() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-3">
-                        {!a.checked_in && (
+                        {!a.cancelled && !a.checked_in && (
                           <button
                             onClick={() => handleManualCheckIn(a.ticket_id)}
                             className="text-xs text-gala-deep hover:text-gala-dark font-medium"
@@ -276,21 +304,27 @@ export default function Admin() {
                             Check In
                           </button>
                         )}
+                        {!a.cancelled && (
+                          <button
+                            onClick={() => handleResend(a.id)}
+                            disabled={resending === a.id}
+                            className="text-xs text-gray-400 hover:text-gray-600 font-medium disabled:opacity-50"
+                            title="Resend email"
+                          >
+                            {resending === a.id ? '...' : 'Resend'}
+                          </button>
+                        )}
                         <button
-                          onClick={() => handleResend(a.id)}
-                          disabled={resending === a.id}
-                          className="text-xs text-gray-400 hover:text-gray-600 font-medium disabled:opacity-50"
-                          title="Resend email"
-                        >
-                          {resending === a.id ? '...' : 'Resend'}
-                        </button>
-                        <button
-                          onClick={() => handleDelete(a)}
+                          onClick={() => handleCancel(a)}
                           disabled={deleting === a.id}
-                          className="text-xs text-red-500 hover:text-red-700 font-medium disabled:opacity-50"
-                          title="Cancel ticket"
+                          className={`text-xs font-medium disabled:opacity-50 ${
+                            a.cancelled
+                              ? 'text-gala-deep hover:text-gala-dark'
+                              : 'text-red-500 hover:text-red-700'
+                          }`}
+                          title={a.cancelled ? 'Restore ticket' : 'Cancel ticket'}
                         >
-                          {deleting === a.id ? '...' : 'Cancel'}
+                          {deleting === a.id ? '...' : a.cancelled ? 'Restore' : 'Cancel'}
                         </button>
                       </div>
                     </td>

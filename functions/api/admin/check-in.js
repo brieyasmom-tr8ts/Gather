@@ -9,11 +9,22 @@ export async function onRequestPost(context) {
     }
 
     const attendee = await env.DB.prepare(
-      'SELECT id, ticket_id, first_name, last_name, email, checked_in, checked_in_at FROM attendees WHERE ticket_id = ?'
+      'SELECT id, ticket_id, first_name, last_name, email, checked_in, checked_in_at, cancelled FROM attendees WHERE ticket_id = ?'
     ).bind(ticketId).first();
 
     if (!attendee) {
       return jsonResponse({ status: 'not_found' }, 404);
+    }
+
+    if (attendee.cancelled) {
+      return jsonResponse({
+        status: 'cancelled',
+        attendee: {
+          first_name: attendee.first_name,
+          last_name: attendee.last_name,
+          email: attendee.email,
+        },
+      });
     }
 
     if (attendee.checked_in) {

@@ -9,14 +9,14 @@ export async function onRequestGet(context) {
     if (search) {
       const pattern = `%${search}%`;
       result = await env.DB.prepare(
-        `SELECT id, ticket_id, first_name, last_name, email, phone, giver_army, giver_army_tenure, checked_in, checked_in_at, created_at
+        `SELECT id, ticket_id, first_name, last_name, email, phone, giver_army, giver_army_tenure, checked_in, checked_in_at, cancelled, cancelled_at, created_at
          FROM attendees
          WHERE first_name LIKE ? OR last_name LIKE ? OR email LIKE ? OR phone LIKE ?
          ORDER BY created_at DESC`
       ).bind(pattern, pattern, pattern, pattern).all();
     } else {
       result = await env.DB.prepare(
-        `SELECT id, ticket_id, first_name, last_name, email, phone, giver_army, giver_army_tenure, checked_in, checked_in_at, created_at
+        `SELECT id, ticket_id, first_name, last_name, email, phone, giver_army, giver_army_tenure, checked_in, checked_in_at, cancelled, cancelled_at, created_at
          FROM attendees ORDER BY created_at DESC`
       ).all();
     }
