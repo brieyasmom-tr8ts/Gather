@@ -68,9 +68,9 @@
 
 /* Hero background pattern */
 .hero-pattern {
-  background-image: radial-gradient(ellipse at 20% 50%, rgba(120, 80, 200, 0.15) 0%, transparent 50%),
-                    radial-gradient(ellipse at 80% 20%, rgba(232, 85, 61, 0.1) 0%, transparent 50%),
-                    radial-gradient(ellipse at 50% 80%, rgba(212, 175, 55, 0.08) 0%, transparent 50%);
+  background-image: radial-gradient(ellipse at 20% 50%, rgba(220, 50, 30, 0.2) 0%, transparent 50%),
+                    radial-gradient(ellipse at 80% 20%, rgba(245, 200, 66, 0.12) 0%, transparent 50%),
+                    radial-gradient(ellipse at 50% 80%, rgba(255, 140, 50, 0.1) 0%, transparent 50%);
 }
 
 /* Scanner result overlays */
