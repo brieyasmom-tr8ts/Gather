@@ -160,9 +160,6 @@ export default function Register() {
 
       <section className="bg-gradient-to-br from-gala-dark to-gala-deep text-white">
         <div className="max-w-3xl mx-auto px-6 py-10 text-center">
-          <p className="text-gala-mint text-xs font-semibold uppercase tracking-[0.22em] mb-3">
-            {event.weekday}
-          </p>
           <h1 className="text-3xl md:text-4xl font-extrabold mb-2">{event.long_date}</h1>
           <p className="text-white/80 text-lg mb-2">{event.time_range}</p>
           {venueLine && <p className="text-white/60 text-sm">{venueLine}</p>}

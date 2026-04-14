@@ -33,48 +33,38 @@ export default function Home() {
             You&rsquo;re Invited
           </div>
 
-          <h1 className="text-white font-extrabold tracking-tight text-5xl md:text-7xl lg:text-8xl mb-5">
+          <h1 className="text-white font-extrabold tracking-tight text-5xl md:text-7xl lg:text-8xl mb-4">
             {event.name}
+            {event.year && <span className="text-gala-mint ml-3 md:ml-5">{event.year}</span>}
           </h1>
-          {event.year && (
-            <p className="text-gala-mint text-2xl md:text-3xl font-semibold mb-8">{event.year}</p>
-          )}
           {event.tagline && (
-            <p className="text-white/90 text-lg md:text-xl font-light max-w-2xl mx-auto mb-10">
+            <p className="text-white/85 text-lg md:text-xl font-light max-w-2xl mx-auto mb-12">
               {event.tagline}
             </p>
           )}
 
-          {/* Primary event facts */}
-          <div className="inline-block bg-white/8 border border-white/15 backdrop-blur-md rounded-2xl px-6 py-5 mb-10">
-            <p className="text-gala-mint text-sm font-semibold uppercase tracking-widest mb-1">
-              {event.weekday || ''}
-            </p>
-            <p className="text-white text-2xl md:text-3xl font-bold mb-1">{event.long_date}</p>
-            <p className="text-white/80 text-lg">{event.time_range}</p>
-            {venueLine && (
-              <p className="text-white/70 text-sm mt-3 pt-3 border-t border-white/10">{venueLine}</p>
-            )}
-          </div>
+          {/* Primary event facts — one line, no eyebrow, no box */}
+          <p className="text-white text-xl md:text-2xl font-semibold mb-1">
+            {event.long_date}
+          </p>
+          <p className="text-white/80 text-base md:text-lg mb-2">{event.time_range}</p>
+          {venueLine && (
+            <p className="text-white/60 text-sm md:text-base">{venueLine}</p>
+          )}
 
-          <div className="mb-8">
+          <div className="mt-10 mb-8">
             <Countdown label={countdown.label} />
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link
-              to="/register"
-              className="inline-flex items-center gap-3 bg-gala-mint text-gala-dark px-10 py-4 rounded-full text-lg font-extrabold hover:bg-white transition-all shadow-xl shadow-gala-mint/20 active:scale-[0.98]"
-            >
-              {event.is_full ? 'Join Waitlist' : 'Reserve Your Spot'}
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-              </svg>
-            </Link>
-            <a href="#details" className="text-white/80 hover:text-white text-sm font-medium px-6 py-3">
-              Event details ↓
-            </a>
-          </div>
+          <Link
+            to="/register"
+            className="inline-flex items-center gap-3 bg-gala-mint text-gala-dark px-10 py-4 rounded-full text-lg font-extrabold hover:bg-white transition-all shadow-xl shadow-gala-mint/20 active:scale-[0.98]"
+          >
+            {event.is_full ? 'Join Waitlist' : 'Reserve Your Spot'}
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+          </Link>
 
           {showRemaining && (
             <p className="mt-8 text-xs uppercase tracking-[0.22em] font-semibold text-gala-mint">
