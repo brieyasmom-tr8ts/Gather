@@ -75,13 +75,23 @@ export default function AttendeesTab({ showToast, onDataChange }) {
   };
 
   const cancel = async (id) => {
-    if (!confirm('Cancel this registration? The attendee will be marked as cancelled and freed from the count.')) return;
+    if (!confirm('Cancel this registration? The attendee will be marked as cancelled (kept on record, email stays locked).')) return;
     const r = await fetch(`/api/admin/attendee/${id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'cancel' }),
     });
     if (r.ok) { showToast('Registration cancelled'); load(); onDataChange?.(); }
     else showToast('Failed to cancel', 'error');
+  };
+
+  const remove = async (id) => {
+    if (!confirm('Delete this attendee? This permanently removes the row and frees up their email for re-registration.')) return;
+    const r = await fetch(`/api/admin/attendee/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete' }),
+    });
+    if (r.ok) { showToast('Attendee deleted'); load(); onDataChange?.(); }
+    else showToast('Failed to delete', 'error');
   };
 
   const moveFromWaitlist = async (id) => {
@@ -191,12 +201,15 @@ export default function AttendeesTab({ showToast, onDataChange }) {
                       {!a.cancelled && a.is_waitlist && (
                         <button onClick={() => moveFromWaitlist(a.id)} className="text-gala-deep hover:underline font-semibold">Move in</button>
                       )}
-                      {!a.cancelled && (
+                      {!a.cancelled ? (
                         <>
                           <button onClick={() => setEdit(a)} className="text-gray-500 hover:text-gray-800">Edit</button>
                           <button onClick={() => resend(a.id)} className="text-gray-500 hover:text-gray-800">Resend</button>
-                          <button onClick={() => cancel(a.id)} className="text-red-500 hover:text-red-700">Cancel</button>
+                          <button onClick={() => cancel(a.id)} className="text-amber-600 hover:text-amber-800">Cancel</button>
+                          <button onClick={() => remove(a.id)} className="text-red-500 hover:text-red-700">Delete</button>
                         </>
+                      ) : (
+                        <button onClick={() => remove(a.id)} className="text-red-500 hover:text-red-700">Delete</button>
                       )}
                     </div>
                   </td>

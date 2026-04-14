@@ -23,6 +23,24 @@ export async function onRequestPatch(context) {
     return json({ ok: true });
   }
 
+  if (action === 'delete') {
+    // Hard delete — frees the email for re-registration.
+    await env.DB.prepare(`DELETE FROM attendees WHERE id=?`).bind(id).run();
+    // If the group is now empty, delete it too.
+    const remaining = await env.DB.prepare(
+      `SELECT COUNT(*) AS n FROM attendees WHERE registration_group_id = ?`
+    ).bind(row.registration_group_id).first();
+    if ((remaining?.n || 0) === 0) {
+      await env.DB.prepare(`DELETE FROM registrations WHERE group_id = ?`)
+        .bind(row.registration_group_id).run();
+    } else {
+      await env.DB.prepare(
+        `UPDATE registrations SET total_attendees = ? WHERE group_id = ?`
+      ).bind(remaining.n, row.registration_group_id).run();
+    }
+    return json({ ok: true });
+  }
+
   if (action === 'move_to_confirmed') {
     await env.DB.prepare(
       `UPDATE attendees SET is_waitlist=0, waitlist_timestamp=NULL, updated_at=datetime('now') WHERE id=?`

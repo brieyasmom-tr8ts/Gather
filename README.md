@@ -79,8 +79,13 @@ Tables (see `schema.sql` for full SQL):
   created_at, updated_at)`
 - `email_templates(slug, name, subject, body, updated_at)`
 
-A unique partial index on `attendees(email) WHERE cancelled = 0` enforces
-"one email per event" for active registrations.
+`attendees.email` has a column-level UNIQUE constraint, so an email can only
+be registered once per event. Two admin actions:
+
+- **Cancel** — keeps the row, marks `cancelled = 1`. Email stays locked
+  (cannot be re-registered). Useful for audit trails.
+- **Delete** — hard-removes the attendee row, freeing up the email for a
+  fresh registration.
 
 ### Derived datetime values
 
