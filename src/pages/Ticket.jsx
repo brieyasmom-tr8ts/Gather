@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { EVENT } from '../config';
+import { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
 
 export default function Ticket() {
   const { ticketId } = useParams();
@@ -9,11 +8,8 @@ export default function Ticket() {
 
   useEffect(() => {
     fetch(`/api/ticket/${ticketId}`)
-      .then((res) => {
-        if (!res.ok) throw new Error('Not found');
-        return res.json();
-      })
-      .then((data) => setTicket(data))
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then(setTicket)
       .catch(() => setTicket(null))
       .finally(() => setLoading(false));
   }, [ticketId]);
@@ -21,7 +17,7 @@ export default function Ticket() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin w-8 h-8 border-4 border-primary-200 border-t-primary-500 rounded-full" />
+        <div className="animate-spin w-8 h-8 border-4 border-gray-200 border-t-gala-deep rounded-full" />
       </div>
     );
   }
@@ -30,7 +26,7 @@ export default function Ticket() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Ticket Not Found</h1>
+          <h1 className="text-2xl font-bold text-gala-dark mb-2">Ticket Not Found</h1>
           <p className="text-gray-500 mb-6">This ticket doesn&rsquo;t exist or has been removed.</p>
           <Link to="/" className="btn-primary">Go Home</Link>
         </div>
@@ -38,18 +34,22 @@ export default function Ticket() {
     );
   }
 
+  const event = ticket.event || {};
+  const venueLine = [event.venue_name, [event.venue_city, event.venue_state].filter(Boolean).join(', ')]
+    .filter(Boolean).join(', ');
+
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6 py-12">
       <div className="card max-w-sm w-full overflow-hidden">
-        {/* Header */}
-        <div className="bg-gradient-to-br from-gala-dark to-gala-purple p-6 text-center text-white">
-          <p className="text-xs uppercase tracking-[0.2em] text-primary-300 mb-1">{EVENT.year}</p>
-          <h1 className="text-2xl font-bold">{EVENT.name}</h1>
+        <div className="bg-gradient-to-br from-gala-dark to-gala-deep p-6 text-center text-white">
+          <p className="text-xs uppercase tracking-[0.2em] text-gala-mint mb-1">
+            {event.year || ''}
+          </p>
+          <h1 className="text-2xl font-bold">{event.name || 'Event'}</h1>
         </div>
 
-        {/* Content */}
         <div className="p-6 text-center">
-          <h2 className="text-xl font-bold text-gray-900 mb-1">
+          <h2 className="text-xl font-bold text-gala-dark mb-1">
             {ticket.first_name} {ticket.last_name}
           </h2>
           <p className="text-gray-400 text-sm mb-6">{ticket.email}</p>
@@ -65,9 +65,9 @@ export default function Ticket() {
           </p>
 
           <div className="text-sm text-gray-500 space-y-1 border-t border-gray-100 pt-4">
-            <p>{EVENT.date}</p>
-            <p>{EVENT.time}</p>
-            <p>{EVENT.location}, {EVENT.address}</p>
+            <p>{event.long_date}</p>
+            <p>{event.time_range}</p>
+            {venueLine && <p>{venueLine}</p>}
           </div>
 
           {ticket.checked_in ? (

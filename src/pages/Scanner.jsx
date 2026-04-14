@@ -1,195 +1,209 @@
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 export default function Scanner() {
   const navigate = useNavigate();
+  const [mode, setMode] = useState('qr'); // 'qr' | 'manual'
   const [result, setResult] = useState(null);
-  const [scanning, setScanning] = useState(true);
   const [error, setError] = useState('');
+  const [query, setQuery] = useState('');
+  const [matches, setMatches] = useState([]);
+  const [stats, setStats] = useState(null);
+
   const scannerRef = useRef(null);
-  const scannerInstanceRef = useRef(null);
   const processingRef = useRef(false);
 
   useEffect(() => {
+    loadStats();
+  }, []);
+
+  const loadStats = async () => {
+    try {
+      const r = await fetch('/api/admin/stats');
+      if (r.status === 401) return navigate('/admin/login');
+      if (r.ok) setStats(await r.json());
+    } catch {}
+  };
+
+  // QR camera
+  useEffect(() => {
+    if (mode !== 'qr') return;
     let scanner = null;
 
-    const initScanner = async () => {
+    (async () => {
       try {
         const { Html5Qrcode } = await import('html5-qrcode');
         scanner = new Html5Qrcode('qr-reader');
-        scannerInstanceRef.current = scanner;
-
+        scannerRef.current = scanner;
         await scanner.start(
           { facingMode: 'environment' },
-          {
-            fps: 10,
-            qrbox: { width: 280, height: 280 },
-            aspectRatio: 1,
-          },
+          { fps: 10, qrbox: { width: 280, height: 280 }, aspectRatio: 1 },
           handleScan,
-          () => {} // Ignore errors from scanning
+          () => {}
         );
-      } catch (err) {
-        setError('Camera access denied. Please allow camera access and reload.');
+      } catch {
+        setError('Camera access denied. Switch to manual check-in or reload the page.');
       }
-    };
-
-    initScanner();
+    })();
 
     return () => {
-      if (scanner && scanner.isScanning) {
-        scanner.stop().catch(() => {});
-      }
+      if (scanner && scanner.isScanning) scanner.stop().catch(() => {});
     };
-  }, []);
+  }, [mode]);
 
-  const handleScan = async (decodedText) => {
+  const handleScan = async (text) => {
     if (processingRef.current) return;
     processingRef.current = true;
+    let ticketId = text;
+    const uuid = text.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+    if (uuid) ticketId = uuid[1];
+    await submitCheckIn({ ticketId });
+    setTimeout(() => { setResult(null); processingRef.current = false; }, 3500);
+  };
 
-    // Extract ticket ID (could be a UUID or a URL containing one)
-    let ticketId = decodedText;
-    const uuidMatch = decodedText.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
-    if (uuidMatch) {
-      ticketId = uuidMatch[1];
-    }
-
+  const submitCheckIn = async (body) => {
     try {
-      const res = await fetch('/api/admin/check-in', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ticketId }),
+      const r = await fetch('/api/admin/check-in', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
       });
-
-      if (res.status === 401) {
-        navigate('/admin/login');
-        return;
-      }
-
-      const data = await res.json();
-
+      if (r.status === 401) return navigate('/admin/login');
+      const data = await r.json();
       if (data.status === 'checked_in') {
-        setResult({
-          type: 'success',
-          title: 'Checked In!',
-          name: `${data.attendee.first_name} ${data.attendee.last_name}`,
-          detail: data.attendee.email,
-        });
+        setResult({ type: 'success', title: 'Checked in', name: `${data.attendee.first_name} ${data.attendee.last_name}`, detail: data.attendee.email });
       } else if (data.status === 'already_checked_in') {
-        setResult({
-          type: 'warning',
-          title: 'Already Checked In',
-          name: `${data.attendee.first_name} ${data.attendee.last_name}`,
-          detail: `Checked in at ${new Date(data.attendee.checked_in_at).toLocaleTimeString()}`,
-        });
+        setResult({ type: 'warning', title: 'Already checked in', name: `${data.attendee.first_name} ${data.attendee.last_name}`, detail: `at ${new Date(data.attendee.checked_in_at).toLocaleTimeString()}` });
+      } else if (data.status === 'waitlist') {
+        setResult({ type: 'error', title: 'Waitlist', name: 'This attendee is on the waitlist', detail: 'Please confirm manually before check-in' });
+      } else if (data.status === 'cancelled') {
+        setResult({ type: 'error', title: 'Cancelled', name: 'Registration cancelled', detail: '' });
       } else {
-        setResult({
-          type: 'error',
-          title: 'Invalid Ticket',
-          name: 'This ticket was not found',
-          detail: 'Please check and try again',
-        });
+        setResult({ type: 'error', title: 'Invalid ticket', name: 'Not found', detail: '' });
       }
+      loadStats();
     } catch {
-      setResult({
-        type: 'error',
-        title: 'Scan Error',
-        name: 'Could not verify ticket',
-        detail: 'Please check connection and try again',
-      });
+      setResult({ type: 'error', title: 'Error', name: 'Could not verify ticket', detail: '' });
     }
-
-    setScanning(false);
-
-    // Auto-reset after 4 seconds
-    setTimeout(() => {
-      setResult(null);
-      setScanning(true);
-      processingRef.current = false;
-    }, 4000);
   };
 
-  const resultStyles = {
-    success: 'scanner-success',
-    warning: 'scanner-warning',
-    error: 'scanner-error',
-  };
+  // Manual search
+  useEffect(() => {
+    if (mode !== 'manual' || query.length < 2) { setMatches([]); return; }
+    const id = setTimeout(async () => {
+      try {
+        const r = await fetch(`/api/admin/check-in?q=${encodeURIComponent(query)}`);
+        if (r.ok) setMatches((await r.json()).results || []);
+      } catch {}
+    }, 200);
+    return () => clearTimeout(id);
+  }, [query, mode]);
 
-  const resultIcons = {
-    success: (
-      <svg className="w-20 h-20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-    warning: (
-      <svg className="w-20 h-20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-      </svg>
-    ),
-    error: (
-      <svg className="w-20 h-20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
+  const quickCheckIn = async (row) => {
+    await submitCheckIn({ id: row.id });
+    setQuery(''); setMatches([]);
   };
 
   return (
-    <div className="min-h-screen bg-black flex flex-col">
-      {/* Header */}
-      <header className="bg-black/80 backdrop-blur-sm px-6 py-4 flex items-center justify-between z-10">
-        <Link to="/admin" className="text-white font-semibold flex items-center gap-2">
+    <div className="min-h-screen bg-gray-900 flex flex-col text-white">
+      <header className="bg-gray-900 px-6 py-4 flex items-center justify-between border-b border-white/10">
+        <Link to="/admin" className="font-semibold flex items-center gap-2 hover:text-gala-mint">
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
           </svg>
           Dashboard
         </Link>
-        <span className="text-white/60 text-sm">QR Scanner</span>
+        <div className="text-sm text-white/70">
+          {stats && <>{stats.checkedIn} / {stats.registered} checked in</>}
+        </div>
       </header>
 
-      {/* Scanner */}
-      <div className="flex-1 relative flex items-center justify-center">
-        {error ? (
-          <div className="text-center px-6">
-            <p className="text-red-400 text-lg mb-4">{error}</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="btn-primary"
-            >
-              Retry
-            </button>
+      {/* Mode switch */}
+      <div className="flex justify-center gap-2 p-3 bg-gray-900 border-b border-white/10">
+        <button
+          onClick={() => setMode('qr')}
+          className={`px-4 py-2 rounded-full text-sm font-semibold ${mode === 'qr' ? 'bg-gala-mint text-gala-dark' : 'bg-white/10 text-white/70'}`}
+        >QR Scanner</button>
+        <button
+          onClick={() => setMode('manual')}
+          className={`px-4 py-2 rounded-full text-sm font-semibold ${mode === 'manual' ? 'bg-gala-mint text-gala-dark' : 'bg-white/10 text-white/70'}`}
+        >Manual Check-In</button>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 relative">
+        {mode === 'qr' ? (
+          <div className="flex items-center justify-center h-full min-h-[60vh]">
+            {error ? (
+              <div className="text-center px-6">
+                <p className="text-red-300 text-lg mb-4">{error}</p>
+                <button onClick={() => setMode('manual')} className="btn-primary">Switch to manual</button>
+              </div>
+            ) : (
+              <>
+                <div id="qr-reader" className="w-full max-w-lg mx-auto" />
+                <p className="absolute bottom-6 left-0 right-0 text-center text-white/60 text-sm">
+                  Point camera at the ticket QR code
+                </p>
+              </>
+            )}
+            {result && (
+              <ResultOverlay result={result} onClose={() => setResult(null)} />
+            )}
           </div>
         ) : (
-          <>
-            <div
-              id="qr-reader"
-              ref={scannerRef}
-              className="w-full max-w-lg mx-auto"
-              style={{ border: 'none' }}
+          <div className="max-w-2xl mx-auto p-6">
+            <input
+              autoFocus
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search by name or email…"
+              className="w-full px-5 py-4 rounded-2xl bg-white text-gala-dark text-lg font-medium focus:outline-none focus:ring-4 focus:ring-gala-mint/40"
             />
-
-            {scanning && (
-              <div className="absolute bottom-8 left-0 right-0 text-center">
-                <p className="text-white/60 text-lg">Point camera at QR code</p>
-              </div>
-            )}
-          </>
-        )}
-
-        {/* Result Overlay */}
-        {result && (
-          <div
-            className={`absolute inset-0 flex items-center justify-center ${resultStyles[result.type]} animate-fade-in z-20`}
-          >
-            <div className="text-center text-white px-8">
-              <div className="flex justify-center mb-4 animate-check">
-                {resultIcons[result.type]}
-              </div>
-              <h2 className="text-4xl font-bold mb-2">{result.title}</h2>
-              <p className="text-2xl font-medium mb-1 opacity-90">{result.name}</p>
-              <p className="text-lg opacity-70">{result.detail}</p>
-            </div>
+            <ul className="mt-4 space-y-2">
+              {matches.map((m) => (
+                <li key={m.id}
+                    className={`card p-4 flex items-center justify-between text-gala-dark
+                                ${m.checked_in ? 'opacity-60' : 'hover:bg-gray-50 cursor-pointer'}`}
+                    onClick={() => !m.checked_in && quickCheckIn(m)}
+                >
+                  <div>
+                    <p className="font-semibold">{m.first_name} {m.last_name}</p>
+                    <p className="text-xs text-gray-500">{m.email}</p>
+                    {m.is_waitlist ? <span className="text-xs text-amber-600">Waitlist</span> : null}
+                  </div>
+                  {m.checked_in ? (
+                    <span className="text-xs font-medium text-green-600">Checked in</span>
+                  ) : (
+                    <span className="text-xs font-medium text-gala-deep">Tap to check in →</span>
+                  )}
+                </li>
+              ))}
+              {query.length >= 2 && !matches.length && (
+                <li className="text-center text-white/60 py-8">No matches.</li>
+              )}
+            </ul>
+            {result && <ResultOverlay result={result} onClose={() => setResult(null)} />}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function ResultOverlay({ result, onClose }) {
+  const bg = {
+    success: 'bg-emerald-500/95',
+    warning: 'bg-amber-500/95',
+    error: 'bg-red-500/95',
+  }[result.type] || 'bg-gray-700/95';
+
+  return (
+    <div className={`fixed inset-0 ${bg} flex items-center justify-center z-30 animate-fade-in`}>
+      <button onClick={onClose} className="absolute top-5 right-6 text-white/90 text-xl">×</button>
+      <div className="text-center text-white px-6">
+        <h2 className="text-4xl font-extrabold mb-2">{result.title}</h2>
+        <p className="text-2xl font-medium mb-1 opacity-95">{result.name}</p>
+        {result.detail && <p className="text-lg opacity-80">{result.detail}</p>}
       </div>
     </div>
   );
