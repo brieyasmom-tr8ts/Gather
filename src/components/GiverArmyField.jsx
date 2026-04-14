@@ -12,7 +12,7 @@ export default function GiverArmyField({ giverArmy, giverArmyTenure, onChange })
             onClick={() => onChange({ giverArmy: true })}
             className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-medium transition-all duration-200 ${
               giverArmy
-                ? 'bg-primary-500 text-white shadow-md shadow-primary-500/25'
+                ? 'bg-gala-deep text-white shadow-md shadow-gala-deep/25'
                 : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
             }`}
           >
@@ -51,7 +51,7 @@ export default function GiverArmyField({ giverArmy, giverArmyTenure, onChange })
                 onClick={() => onChange({ giverArmyTenure: option.value })}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
                   giverArmyTenure === option.value
-                    ? 'bg-primary-500 text-white shadow-md shadow-primary-500/25 scale-105'
+                    ? 'bg-gala-deep text-white shadow-md shadow-gala-deep/25 scale-105'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
@@ -60,7 +60,7 @@ export default function GiverArmyField({ giverArmy, giverArmyTenure, onChange })
             ))}
           </div>
           {giverArmy && (
-            <p className="text-xs text-primary-500 mt-2 font-medium animate-fade-in">
+            <p className="text-xs text-gala-deep mt-2 font-medium animate-fade-in">
               Welcome to the family!
             </p>
           )}

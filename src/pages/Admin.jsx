@@ -101,7 +101,7 @@ export default function Admin() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin w-8 h-8 border-4 border-primary-200 border-t-primary-500 rounded-full" />
+        <div className="animate-spin w-8 h-8 border-4 border-gala-mint/30 border-t-gala-deep rounded-full" />
       </div>
     );
   }
@@ -178,7 +178,7 @@ export default function Admin() {
                     <td className="px-6 py-4 text-sm text-gray-500 hidden md:table-cell">{a.email}</td>
                     <td className="px-6 py-4 hidden lg:table-cell">
                       {a.giver_army ? (
-                        <span className="inline-flex items-center gap-1 text-xs font-medium text-primary-600 bg-primary-50 px-2 py-1 rounded-full">
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-gala-deep bg-gala-mint/20 px-2 py-1 rounded-full">
                           Yes {a.giver_army_tenure && `\u00B7 ${a.giver_army_tenure}`}
                         </span>
                       ) : (
@@ -203,7 +203,7 @@ export default function Admin() {
                         {!a.checked_in && (
                           <button
                             onClick={() => handleManualCheckIn(a.ticket_id)}
-                            className="text-xs text-primary-500 hover:text-primary-700 font-medium"
+                            className="text-xs text-gala-deep hover:text-gala-dark font-medium"
                             title="Manual check-in"
                           >
                             Check In
@@ -249,7 +249,7 @@ export default function Admin() {
 
 function StatCard({ label, value, color }) {
   const colors = {
-    primary: 'bg-primary-50 text-primary-700',
+    primary: 'bg-gala-mint/20 text-gala-deep',
     green: 'bg-green-50 text-green-700',
     gray: 'bg-gray-100 text-gray-700',
   };

@@ -21,7 +21,7 @@ export default function Ticket() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin w-8 h-8 border-4 border-primary-200 border-t-primary-500 rounded-full" />
+        <div className="animate-spin w-8 h-8 border-4 border-gala-mint/30 border-t-gala-deep rounded-full" />
       </div>
     );
   }
@@ -43,7 +43,7 @@ export default function Ticket() {
       <div className="card max-w-sm w-full overflow-hidden">
         {/* Header */}
         <div className="bg-gradient-to-br from-gala-dark to-gala-purple p-6 text-center text-white">
-          <p className="text-xs uppercase tracking-[0.2em] text-primary-300 mb-1">{EVENT.year}</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-gala-mint mb-1">{EVENT.year}</p>
           <h1 className="text-2xl font-bold">{EVENT.name}</h1>
         </div>
 

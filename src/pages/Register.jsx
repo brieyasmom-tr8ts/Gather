@@ -123,7 +123,7 @@ export default function Register() {
       {/* Header */}
       <header className="bg-white border-b border-gray-100">
         <div className="max-w-2xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="text-lg font-bold text-gray-900 hover:text-primary-500 transition-colors">
+          <Link to="/" className="text-lg font-bold text-gray-900 hover:text-gala-deep transition-colors">
             {EVENT.name}
           </Link>
           <span className="text-sm text-gray-400">{EVENT.date}</span>
@@ -160,7 +160,7 @@ export default function Register() {
               type="button"
               onClick={addGuest}
               className="w-full py-4 rounded-2xl border-2 border-dashed border-gray-200 text-gray-500
-                         hover:border-primary-300 hover:text-primary-500 hover:bg-primary-50/50
+                         hover:border-gala-mint hover:text-gala-deep hover:bg-gala-mint/10
                          transition-all duration-200 font-medium flex items-center justify-center gap-2"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

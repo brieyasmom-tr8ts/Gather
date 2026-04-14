@@ -17,8 +17,8 @@ export default function AttendeeForm({ index, attendee, onChange, onRemove, erro
           <div className="flex items-center gap-3">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
               isPrimary
-                ? 'bg-primary-500 text-white'
-                : 'bg-gray-200 text-gray-600'
+                ? 'bg-gala-deep text-white'
+                : 'bg-gala-mint text-gala-deep'
             }`}>
               {index + 1}
             </div>

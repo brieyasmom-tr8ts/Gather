@@ -32,7 +32,7 @@ export default function Confirmation() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin w-8 h-8 border-4 border-primary-200 border-t-primary-500 rounded-full" />
+        <div className="animate-spin w-8 h-8 border-4 border-gala-mint/30 border-t-gala-deep rounded-full" />
       </div>
     );
   }
@@ -53,7 +53,7 @@ export default function Confirmation() {
       {/* Header */}
       <header className="bg-white border-b border-gray-100 no-print">
         <div className="max-w-3xl mx-auto px-6 py-4">
-          <Link to="/" className="text-lg font-bold text-gray-900 hover:text-primary-500 transition-colors">
+          <Link to="/" className="text-lg font-bold text-gray-900 hover:text-gala-deep transition-colors">
             {EVENT.name}
           </Link>
         </div>
@@ -113,7 +113,7 @@ export default function Confirmation() {
               <div className="flex flex-col sm:flex-row">
                 {/* Ticket Info */}
                 <div className="flex-1 p-6 md:p-8">
-                  <p className="text-xs uppercase tracking-widest text-primary-500 font-semibold mb-1">
+                  <p className="text-xs uppercase tracking-widest text-gala-deep font-semibold mb-1">
                     {EVENT.name} {EVENT.year}
                   </p>
                   <h3 className="text-xl font-bold text-gray-900 mb-4">
