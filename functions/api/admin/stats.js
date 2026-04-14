@@ -4,10 +4,13 @@ export async function onRequestGet(context) {
   try {
     const total = await env.DB.prepare('SELECT COUNT(*) as count FROM attendees').first();
     const checkedIn = await env.DB.prepare('SELECT COUNT(*) as count FROM attendees WHERE checked_in = 1').first();
+    const giverArmy = await env.DB.prepare('SELECT COUNT(*) as count FROM attendees WHERE giver_army = 1').first();
 
     return new Response(JSON.stringify({
       total: total.count,
       checkedIn: checkedIn.count,
+      giverArmy: giverArmy.count,
+      others: total.count - giverArmy.count,
     }), {
       headers: { 'Content-Type': 'application/json' },
     });

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 export default function Admin() {
@@ -8,7 +8,10 @@ export default function Admin() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [resending, setResending] = useState(null);
+  const [deleting, setDeleting] = useState(null);
   const [toast, setToast] = useState(null);
+  const [sortField, setSortField] = useState('created_at');
+  const [sortDir, setSortDir] = useState('desc');
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -40,6 +43,40 @@ export default function Admin() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const sortedAttendees = useMemo(() => {
+    const sorted = [...attendees].sort((a, b) => {
+      let aVal, bVal;
+      if (sortField === 'name') {
+        aVal = `${a.first_name} ${a.last_name}`.toLowerCase();
+        bVal = `${b.first_name} ${b.last_name}`.toLowerCase();
+      } else if (sortField === 'email') {
+        aVal = (a.email || '').toLowerCase();
+        bVal = (b.email || '').toLowerCase();
+      } else if (sortField === 'giver_army') {
+        aVal = a.giver_army ? 1 : 0;
+        bVal = b.giver_army ? 1 : 0;
+      } else if (sortField === 'created_at') {
+        aVal = a.created_at;
+        bVal = b.created_at;
+      } else {
+        return 0;
+      }
+      if (aVal < bVal) return sortDir === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return sorted;
+  }, [attendees, sortField, sortDir]);
+
+  const toggleSort = (field) => {
+    if (sortField === field) {
+      setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDir('asc');
+    }
+  };
 
   const handleExport = async () => {
     try {
@@ -78,6 +115,30 @@ export default function Admin() {
     }
   };
 
+  const handleDelete = async (attendee) => {
+    if (!confirm(`Cancel ticket for ${attendee.first_name} ${attendee.last_name}?\n\nThis cannot be undone.`)) return;
+
+    setDeleting(attendee.id);
+    try {
+      const res = await fetch('/api/admin/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attendeeId: attendee.id }),
+      });
+      if (res.status === 401) { navigate('/admin/login'); return; }
+      if (res.ok) {
+        showToast('Ticket cancelled');
+        fetchData();
+      } else {
+        showToast('Failed to cancel', 'error');
+      }
+    } catch {
+      showToast('Failed to cancel', 'error');
+    } finally {
+      setDeleting(null);
+    }
+  };
+
   const handleManualCheckIn = async (ticketId) => {
     try {
       const res = await fetch('/api/admin/check-in', {
@@ -98,6 +159,12 @@ export default function Admin() {
     }
   };
 
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr.replace(' ', 'T') + 'Z');
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -113,10 +180,7 @@ export default function Admin() {
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <h1 className="text-lg font-bold text-gray-900">Event Dashboard</h1>
           <div className="flex items-center gap-3">
-            <Link
-              to="/admin/scanner"
-              className="btn-primary text-sm py-2"
-            >
+            <Link to="/admin/scanner" className="btn-primary text-sm py-2">
               <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
               </svg>
@@ -132,10 +196,11 @@ export default function Admin() {
       <main className="max-w-6xl mx-auto px-6 py-8">
         {/* Stats */}
         {stats && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-            <StatCard label="Total Registered" value={stats.total} color="primary" />
-            <StatCard label="Checked In" value={stats.checkedIn} color="green" />
-            <StatCard label="Remaining" value={stats.total - stats.checkedIn} color="gray" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <StatCard label="Total Registered" value={stats.total} />
+            <StatCard label="Checked In" value={stats.checkedIn} accent="green" />
+            <StatCard label="Giver Army" value={stats.giverArmy || 0} accent="mint" />
+            <StatCard label="Others" value={stats.others || 0} />
           </div>
         )}
 
@@ -161,15 +226,16 @@ export default function Admin() {
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100">
-                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-6 py-3">Name</th>
-                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-6 py-3 hidden md:table-cell">Email</th>
-                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-6 py-3 hidden lg:table-cell">Giver Army</th>
+                  <SortHeader label="Name" field="name" sortField={sortField} sortDir={sortDir} onClick={toggleSort} />
+                  <SortHeader label="Email" field="email" sortField={sortField} sortDir={sortDir} onClick={toggleSort} className="hidden md:table-cell" />
+                  <SortHeader label="Giver Army" field="giver_army" sortField={sortField} sortDir={sortDir} onClick={toggleSort} className="hidden lg:table-cell" />
+                  <SortHeader label="Registered" field="created_at" sortField={sortField} sortDir={sortDir} onClick={toggleSort} className="hidden lg:table-cell" />
                   <th className="text-center text-xs font-semibold text-gray-500 uppercase tracking-wider px-6 py-3">Status</th>
                   <th className="text-right text-xs font-semibold text-gray-500 uppercase tracking-wider px-6 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {attendees.map((a) => (
+                {sortedAttendees.map((a) => (
                   <tr key={a.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-6 py-4">
                       <p className="font-medium text-gray-900">{a.first_name} {a.last_name}</p>
@@ -185,6 +251,7 @@ export default function Admin() {
                         <span className="text-xs text-gray-400">&mdash;</span>
                       )}
                     </td>
+                    <td className="px-6 py-4 text-sm text-gray-500 hidden lg:table-cell">{formatDate(a.created_at)}</td>
                     <td className="px-6 py-4 text-center">
                       {a.checked_in ? (
                         <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-2.5 py-1 rounded-full">
@@ -199,7 +266,7 @@ export default function Admin() {
                       )}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-3">
                         {!a.checked_in && (
                           <button
                             onClick={() => handleManualCheckIn(a.ticket_id)}
@@ -217,13 +284,21 @@ export default function Admin() {
                         >
                           {resending === a.id ? '...' : 'Resend'}
                         </button>
+                        <button
+                          onClick={() => handleDelete(a)}
+                          disabled={deleting === a.id}
+                          className="text-xs text-red-500 hover:text-red-700 font-medium disabled:opacity-50"
+                          title="Cancel ticket"
+                        >
+                          {deleting === a.id ? '...' : 'Cancel'}
+                        </button>
                       </div>
                     </td>
                   </tr>
                 ))}
-                {attendees.length === 0 && (
+                {sortedAttendees.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-gray-400">
+                    <td colSpan={6} className="px-6 py-12 text-center text-gray-400">
                       {search ? 'No attendees match your search.' : 'No registrations yet.'}
                     </td>
                   </tr>
@@ -247,19 +322,39 @@ export default function Admin() {
   );
 }
 
-function StatCard({ label, value, color }) {
-  const colors = {
-    primary: 'bg-gala-mint/20 text-gala-deep',
-    green: 'bg-green-50 text-green-700',
-    gray: 'bg-gray-100 text-gray-700',
-  };
+function SortHeader({ label, field, sortField, sortDir, onClick, className = '' }) {
+  const active = sortField === field;
+  return (
+    <th
+      onClick={() => onClick(field)}
+      className={`text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-6 py-3 cursor-pointer select-none hover:text-gala-deep transition-colors ${className}`}
+    >
+      <span className="inline-flex items-center gap-1">
+        {label}
+        {active && (
+          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            {sortDir === 'asc' ? (
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+            )}
+          </svg>
+        )}
+      </span>
+    </th>
+  );
+}
+
+function StatCard({ label, value, accent }) {
+  const textColor = {
+    green: 'text-green-700',
+    mint: 'text-gala-deep',
+  }[accent] || 'text-gray-900';
 
   return (
-    <div className="card p-6">
+    <div className="card p-5">
       <p className="text-sm font-medium text-gray-500 mb-1">{label}</p>
-      <p className={`text-3xl font-bold ${colors[color]?.split(' ')[1] || 'text-gray-900'}`}>
-        {value}
-      </p>
+      <p className={`text-3xl font-bold ${textColor}`}>{value}</p>
     </div>
   );
 }
