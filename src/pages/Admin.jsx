@@ -34,7 +34,7 @@ export default function Admin() {
 
       setStats(await statsRes.json());
       const data = await attendeesRes.json();
-      setAttendees(data.attendees);
+      setAttendees(Array.isArray(data.attendees) ? data.attendees : []);
     } catch {
       showToast('Failed to load data', 'error');
     } finally {
@@ -47,13 +47,13 @@ export default function Admin() {
   }, [fetchData]);
 
   const sortedAttendees = useMemo(() => {
-    let filtered = attendees;
-    if (filter === 'active') filtered = attendees.filter((a) => !a.cancelled && !a.is_waitlist);
-    else if (filter === 'pending') filtered = attendees.filter((a) => !a.cancelled && !a.is_waitlist && !a.checked_in);
-    else if (filter === 'checked_in') filtered = attendees.filter((a) => !a.cancelled && a.checked_in);
-    else if (filter === 'waitlist') filtered = attendees.filter((a) => !a.cancelled && a.is_waitlist);
-    else if (filter === 'cancelled') filtered = attendees.filter((a) => a.cancelled);
-    // 'all' shows everything
+    const list = Array.isArray(attendees) ? attendees : [];
+    let filtered = list;
+    if (filter === 'active') filtered = list.filter((a) => !a.cancelled && !a.is_waitlist);
+    else if (filter === 'pending') filtered = list.filter((a) => !a.cancelled && !a.is_waitlist && !a.checked_in);
+    else if (filter === 'checked_in') filtered = list.filter((a) => !a.cancelled && a.checked_in);
+    else if (filter === 'waitlist') filtered = list.filter((a) => !a.cancelled && a.is_waitlist);
+    else if (filter === 'cancelled') filtered = list.filter((a) => a.cancelled);
 
     const sorted = [...filtered].sort((a, b) => {
       let aVal, bVal;
