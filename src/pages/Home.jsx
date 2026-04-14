@@ -5,17 +5,17 @@ export default function Home() {
   return (
     <div className="min-h-screen">
       {/* Hero */}
-      <section className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-gala-dark via-gala-red to-gala-dark hero-pattern overflow-hidden">
+      <section className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-gala-dark via-gala-deep to-gala-dark hero-pattern overflow-hidden">
         {/* Decorative glows */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-10 left-10 w-80 h-80 bg-amber-400/20 rounded-full blur-3xl" />
-          <div className="absolute bottom-10 right-10 w-96 h-96 bg-rose-500/20 rounded-full blur-3xl" />
-          <div className="absolute top-1/3 right-1/4 w-72 h-72 bg-orange-400/15 rounded-full blur-3xl" />
-          <div className="absolute bottom-1/3 left-1/4 w-64 h-64 bg-yellow-300/10 rounded-full blur-3xl" />
+          <div className="absolute top-10 left-10 w-80 h-80 bg-gala-mint/20 rounded-full blur-3xl" />
+          <div className="absolute bottom-10 right-10 w-96 h-96 bg-gala-mint/15 rounded-full blur-3xl" />
+          <div className="absolute top-1/3 right-1/4 w-72 h-72 bg-cyan-300/10 rounded-full blur-3xl" />
+          <div className="absolute bottom-1/3 left-1/4 w-64 h-64 bg-teal-200/10 rounded-full blur-3xl" />
         </div>
 
         <div className="relative z-10 text-center px-6 max-w-3xl mx-auto animate-fade-in">
-          <p className="text-base md:text-lg uppercase tracking-[0.3em] text-amber-300 mb-6 font-semibold">
+          <p className="text-base md:text-lg uppercase tracking-[0.3em] text-gala-mint mb-6 font-semibold">
             You&rsquo;re Invited
           </p>
 
@@ -23,7 +23,7 @@ export default function Home() {
             {EVENT.name}
           </h1>
 
-          <p className="text-3xl md:text-4xl text-amber-300 font-semibold mb-8 drop-shadow-md">
+          <p className="text-3xl md:text-4xl text-gala-mint font-semibold mb-8 drop-shadow-md">
             {EVENT.year}
           </p>
 
@@ -31,7 +31,7 @@ export default function Home() {
             {EVENT.tagline}
           </p>
 
-          <div className="flex flex-col items-center gap-1.5 text-white/70 mb-14 text-lg">
+          <div className="flex flex-col items-center gap-1.5 text-gala-light/70 mb-14 text-lg">
             <p>{EVENT.date}</p>
             <p>{EVENT.time}</p>
             <p className="font-medium text-white/80">{EVENT.location} &middot; {EVENT.address}</p>
@@ -39,9 +39,9 @@ export default function Home() {
 
           <Link
             to="/register"
-            className="inline-flex items-center gap-2 bg-amber-400 hover:bg-amber-300 text-gray-900
+            className="inline-flex items-center gap-2 bg-gala-mint hover:bg-gala-light text-gala-dark
                        px-12 py-5 rounded-full text-xl font-bold
-                       shadow-2xl shadow-amber-400/40 hover:shadow-amber-300/50
+                       shadow-2xl shadow-gala-mint/30 hover:shadow-gala-mint/40
                        transform hover:scale-105 active:scale-[0.98]
                        transition-all duration-300 ease-out"
           >
@@ -54,7 +54,7 @@ export default function Home() {
 
         {/* Scroll indicator */}
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-          <svg className="w-7 h-7 text-white/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <svg className="w-7 h-7 text-gala-mint/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
           </svg>
         </div>
@@ -109,7 +109,10 @@ export default function Home() {
           <div className="text-center mt-16">
             <Link
               to="/register"
-              className="btn-primary text-lg px-10 py-4 rounded-full"
+              className="inline-flex items-center justify-center text-lg px-10 py-4 rounded-full
+                         bg-gala-deep hover:bg-gala-dark text-white font-semibold
+                         shadow-lg shadow-gala-deep/25 hover:shadow-xl
+                         active:scale-[0.98] transition-all duration-200 ease-out"
             >
               Register Now
             </Link>
@@ -130,7 +133,7 @@ export default function Home() {
 function DetailCard({ icon, title, line1, line2 }) {
   return (
     <div className="card p-8 text-center">
-      <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary-50 text-primary-500 mb-5">
+      <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-teal-50 text-gala-deep mb-5">
         {icon}
       </div>
       <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>

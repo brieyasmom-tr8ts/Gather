@@ -17,11 +17,10 @@ export default {
           900: '#7F2720',
         },
         gala: {
-          dark: '#1A0A0E',
-          red: '#6B1520',
-          navy: '#16213E',
-          purple: '#2D1B69',
-          gold: '#F5C842',
+          dark: '#042B3E',
+          deep: '#085078',
+          mint: '#85D8CE',
+          light: '#B8EAE4',
         },
       },
       fontFamily: {
