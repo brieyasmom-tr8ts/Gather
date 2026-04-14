@@ -41,6 +41,26 @@ export default function AdminSettings() {
     }
   };
 
+  const runMigrations = async () => {
+    if (!confirm('Run database migrations? This is safe to run multiple times.')) return;
+    try {
+      const res = await fetch('/api/admin/migrate', { method: 'POST' });
+      if (res.status === 401) { navigate('/admin/login'); return; }
+      const data = await res.json();
+      const errors = data.results?.filter((r) => r.status === 'error') || [];
+      if (errors.length) {
+        show(`${errors.length} migration(s) failed - check console`, 'error');
+        console.error('Migration errors:', errors);
+      } else {
+        show('Migrations complete!');
+        // Reload settings
+        fetch('/api/admin/event').then((r) => r.json()).then(setSettings);
+      }
+    } catch {
+      show('Migration failed', 'error');
+    }
+  };
+
   if (!settings) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -111,9 +131,16 @@ export default function AdminSettings() {
           <Field label="Video URL (YouTube/Vimeo embed)" value={settings.giver_army_video_url || ''} onChange={(v) => update('giver_army_video_url', v)} placeholder="https://www.youtube.com/embed/..." hint="Use the embed URL, not the watch URL" />
         </Section>
 
-        <div className="pb-8">
+        <div className="pb-8 space-y-3">
           <button onClick={save} disabled={saving} className="btn-primary w-full py-4 rounded-2xl text-lg">
             {saving ? 'Saving...' : 'Save All Changes'}
+          </button>
+          <button
+            onClick={runMigrations}
+            className="btn-secondary w-full text-sm py-2"
+            title="Apply pending database schema updates"
+          >
+            Run Database Migrations
           </button>
         </div>
       </main>
