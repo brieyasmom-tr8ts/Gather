@@ -56,6 +56,14 @@ export async function onRequestPost(context) {
       name: 'Seed event_settings row',
       sql: 'INSERT OR IGNORE INTO event_settings (id) VALUES (1)',
     },
+    {
+      name: 'Add dietary_needs column',
+      sql: 'ALTER TABLE attendees ADD COLUMN dietary_needs TEXT',
+    },
+    {
+      name: 'Add accessibility_needs column',
+      sql: 'ALTER TABLE attendees ADD COLUMN accessibility_needs TEXT',
+    },
   ];
 
   for (const m of migrations) {

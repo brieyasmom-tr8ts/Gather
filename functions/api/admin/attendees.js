@@ -16,6 +16,8 @@ export async function onRequestGet(context) {
   if (cols.has('is_waitlist')) extra.push('is_waitlist'); else extra.push("0 as is_waitlist");
   if (cols.has('cancelled')) extra.push('cancelled'); else extra.push("0 as cancelled");
   if (cols.has('cancelled_at')) extra.push('cancelled_at'); else extra.push("NULL as cancelled_at");
+  if (cols.has('dietary_needs')) extra.push('dietary_needs'); else extra.push("NULL as dietary_needs");
+  if (cols.has('accessibility_needs')) extra.push('accessibility_needs'); else extra.push("NULL as accessibility_needs");
 
   const selectCols = `id, ticket_id, first_name, last_name, email, giver_army, giver_army_tenure, checked_in, checked_in_at, created_at, ${extra.join(', ')}`;
 

@@ -4,6 +4,7 @@ export async function onRequestGet(context) {
   try {
     const result = await env.DB.prepare(
       `SELECT a.ticket_id, a.first_name, a.last_name, a.email, a.phone, a.giver_army, a.giver_army_tenure,
+              a.dietary_needs, a.accessibility_needs,
               a.photo_consent, a.is_waitlist, a.checked_in, a.checked_in_at, a.cancelled, a.cancelled_at,
               a.created_at, a.registration_group_id
        FROM attendees a ORDER BY a.created_at DESC`
@@ -12,6 +13,7 @@ export async function onRequestGet(context) {
     const headers = [
       'Ticket ID', 'First Name', 'Last Name', 'Email', 'Phone',
       'Giver Army', 'Giver Army Tenure',
+      'Dietary Needs', 'Accessibility Needs',
       'Photo Consent', 'Waitlist',
       'Checked In', 'Checked In At',
       'Cancelled', 'Cancelled At',
@@ -26,6 +28,8 @@ export async function onRequestGet(context) {
       escapeCsv(r.phone || ''),
       r.giver_army ? 'Yes' : 'No',
       r.giver_army_tenure || '',
+      escapeCsv(r.dietary_needs || ''),
+      escapeCsv(r.accessibility_needs || ''),
       r.photo_consent ? 'Yes' : 'No',
       r.is_waitlist ? 'Yes' : 'No',
       r.checked_in ? 'Yes' : 'No',

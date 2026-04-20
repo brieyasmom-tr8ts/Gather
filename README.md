@@ -7,8 +7,9 @@ A production-ready event registration web app built on Cloudflare's edge platfor
 - **Frontend**: React + Vite + Tailwind CSS (deployed to Cloudflare Pages)
 - **Backend**: Cloudflare Pages Functions (Workers runtime)
 - **Database**: Cloudflare D1 (SQLite at the edge)
-- **Email**: Resend API
-- **QR Codes**: `qrcode` npm package (SVG output)
+- **Email**: Brevo API (transactional SMTP)
+- **Bot Protection**: Cloudflare Turnstile + honeypot field
+- **QR Codes**: `qrcode` npm package (SVG output), `html5-qrcode` for scanner
 
 ## Features
 
@@ -18,6 +19,11 @@ A production-ready event registration web app built on Cloudflare's edge platfor
 - Admin dashboard with stats, search, and CSV export
 - Mobile QR scanner for event-day check-in
 - Giver Army membership tracking with tenure
+- Soft-delete cancellation (restorable tickets)
+- Cloudflare Turnstile bot protection
+- Admin-configurable event settings (stored in D1)
+- Bulk email to attendees
+- Waitlist support when capacity is reached
 
 ## Environment Variables
 
@@ -27,10 +33,12 @@ Copy `.dev.vars.example` to `.dev.vars` for local development:
 |---|---|
 | `ADMIN_PASSWORD` | Password for the admin dashboard |
 | `AUTH_SECRET` | Random secret for signing auth tokens (min 32 chars) |
-| `RESEND_API_KEY` | API key from [resend.com](https://resend.com) |
-| `EMAIL_FROM` | Sender email (must be verified in Resend) |
+| `RESEND_API_KEY` | Brevo API key (env var name kept for compatibility) |
+| `EMAIL_FROM` | Sender email, e.g. `Name <email@domain.com>` (must be verified in Brevo) |
 | `BASE_URL` | Public URL of the app (for email links) |
 | `MAX_ATTENDEES` | Max capacity, 0 for unlimited |
+| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile secret key (optional) |
+| `TURNSTILE_SITE_KEY` | Cloudflare Turnstile site key (optional) |
 
 ## Local Development
 
@@ -73,10 +81,12 @@ In the Cloudflare dashboard (Pages > Settings > Environment Variables), set:
 
 - `ADMIN_PASSWORD`
 - `AUTH_SECRET`
-- `RESEND_API_KEY`
+- `RESEND_API_KEY` (Brevo API key)
 - `EMAIL_FROM`
 - `BASE_URL`
 - `MAX_ATTENDEES`
+- `TURNSTILE_SECRET_KEY` (optional)
+- `TURNSTILE_SITE_KEY` (optional)
 
 ### 4. Deploy
 
@@ -95,7 +105,7 @@ functions/          Cloudflare Pages Functions (API)
     register.js     Registration endpoint
   lib/
     auth.js         Token creation/verification
-    email.js        Email template + Resend integration
+    email.js        Email template + Brevo integration
 src/                React frontend
   components/       Reusable form components
   pages/            Route pages
@@ -113,10 +123,11 @@ schema.sql          D1 database schema
 | `/ticket/:ticketId` | Individual ticket view |
 | `/admin/login` | Admin login |
 | `/admin` | Admin dashboard |
+| `/admin/settings` | Event settings management |
 | `/admin/scanner` | QR code check-in scanner |
 
 ## Customization
 
-Edit `src/config.js` to change event details (name, date, location, etc.).
+Event details are managed via the Admin Settings page (`/admin/settings`), which saves to the `event_settings` D1 table. Fallback defaults are in `src/config.js`.
 The email template is in `functions/lib/email.js`.
-Colors are defined in `tailwind.config.js`.
+Colors are defined in `tailwind.config.js` (blue/mint theme under `primary-*` and `gala-*`).

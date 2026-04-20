@@ -114,6 +114,34 @@ export default function AttendeeForm({ index, attendee, onChange, onRemove, erro
             onChange={handleGiverArmyChange}
           />
 
+          {/* Dietary & Accessibility Needs */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="label" htmlFor={`dietary-${index}`}>Dietary Needs</label>
+              <input
+                id={`dietary-${index}`}
+                type="text"
+                value={attendee.dietaryNeeds}
+                onChange={(e) => handleChange('dietaryNeeds', e.target.value)}
+                placeholder="e.g. Vegetarian, gluten-free, nut allergy"
+                className="input-field"
+              />
+              <p className="text-xs text-gray-400 mt-1">Leave blank if none</p>
+            </div>
+            <div>
+              <label className="label" htmlFor={`accessibility-${index}`}>Accessibility Needs</label>
+              <input
+                id={`accessibility-${index}`}
+                type="text"
+                value={attendee.accessibilityNeeds}
+                onChange={(e) => handleChange('accessibilityNeeds', e.target.value)}
+                placeholder="e.g. Wheelchair access, hearing loop"
+                className="input-field"
+              />
+              <p className="text-xs text-gray-400 mt-1">Leave blank if none</p>
+            </div>
+          </div>
+
           {/* Photo Consent */}
           <div className="pt-2 border-t border-gray-100">
             <label className="flex items-start gap-3 cursor-pointer">

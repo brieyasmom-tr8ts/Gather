@@ -21,6 +21,8 @@ CREATE TABLE IF NOT EXISTS attendees (
   is_waitlist INTEGER NOT NULL DEFAULT 0,
   checked_in INTEGER NOT NULL DEFAULT 0,
   checked_in_at TEXT,
+  dietary_needs TEXT,
+  accessibility_needs TEXT,
   cancelled INTEGER NOT NULL DEFAULT 0,
   cancelled_at TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),

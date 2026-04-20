@@ -11,6 +11,8 @@ const emptyAttendee = () => ({
   phone: '',
   giverArmy: null,
   giverArmyTenure: '',
+  dietaryNeeds: '',
+  accessibilityNeeds: '',
   photoConsent: true,
 });
 
@@ -137,6 +139,8 @@ export default function Register() {
             phone: a.phone.trim(),
             giverArmy: a.giverArmy || false,
             giverArmyTenure: a.giverArmy ? a.giverArmyTenure : null,
+            dietaryNeeds: a.dietaryNeeds.trim() || null,
+            accessibilityNeeds: a.accessibilityNeeds.trim() || null,
             photoConsent: a.photoConsent !== false,
           })),
         }),
