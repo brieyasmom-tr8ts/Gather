@@ -136,8 +136,8 @@ export default function Register() {
             }
           });
           setErrors(dup);
-          setStage('form');
         }
+        setStage('form');
         setServerError(data.error || 'Registration failed. Please try again.');
         return;
       }

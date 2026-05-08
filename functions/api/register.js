@@ -118,6 +118,11 @@ export async function onRequestPost(context) {
     }, 201);
   } catch (err) {
     console.error('register error', err);
+    if (err.message?.includes('UNIQUE constraint failed') || err.message?.includes('unique')) {
+      return json({
+        error: 'This email address has already been registered. If you need to make changes, please use your confirmation email to edit your registration.',
+      }, 409);
+    }
     return json({ error: 'Registration failed. Please try again.' }, 500);
   }
 }
