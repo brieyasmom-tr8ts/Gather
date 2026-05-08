@@ -197,6 +197,9 @@ export async function buildPublicEvent(db) {
     available,
     is_full: isFull,
 
+    // Ticket value (dollars) — displayed to communicate the gift
+    ticket_value: parseInt(settings.ticket_value || '0', 10),
+
     // Edit cutoff hours (before event start)
     edit_cutoff_hours: parseInt(settings.edit_cutoff_hours || '24', 10),
   };

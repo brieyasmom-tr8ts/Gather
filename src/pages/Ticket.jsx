@@ -60,9 +60,16 @@ export default function Ticket() {
             className="w-48 h-48 mx-auto mb-4"
           />
 
-          <p className="text-xs font-mono text-gray-400 mb-6">
-            {ticketId.substring(0, 8).toUpperCase()}
-          </p>
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <p className="text-xs font-mono text-gray-400">
+              {ticketId.substring(0, 8).toUpperCase()}
+            </p>
+            {event.ticket_value > 0 && (
+              <span className="text-xs font-semibold text-gala-deep bg-gala-light/50 px-2 py-0.5 rounded-full">
+                ${event.ticket_value} value — Complimentary
+              </span>
+            )}
+          </div>
 
           <div className="text-sm text-gray-500 space-y-1 border-t border-gray-100 pt-4">
             <p>{event.long_date}</p>

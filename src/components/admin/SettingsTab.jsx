@@ -29,6 +29,7 @@ const FIELDS = [
   ['Details', [
     ['dress_code', 'Dress Code', 'text'],
     ['max_capacity', 'Max Capacity', 'number'],
+    ['ticket_value', 'Ticket Value ($)', 'number'],
     ['parking_info', 'Parking info', 'textarea'],
     ['arrival_info', 'Arrival info', 'textarea'],
   ]],

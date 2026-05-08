@@ -40,6 +40,7 @@ export const FALLBACK_EVENT = {
   waitlist_count: 0,
   available: null,
   is_full: false,
+  ticket_value: 250,
   edit_cutoff_hours: 24,
 };
 

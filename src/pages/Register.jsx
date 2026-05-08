@@ -26,6 +26,7 @@ export default function Register() {
   const [serverError, setServerError] = useState('');
   const [stage, setStage] = useState('form'); // 'form' | 'review'
   const [honeypot, setHoneypot] = useState('');
+  const [commitment, setCommitment] = useState(false);
 
   const [turnstileToken, setTurnstileToken] = useState(null);
   const turnstileRef = useRef(null);
@@ -92,6 +93,7 @@ export default function Register() {
       if (a.email) emails.add(a.email.toLowerCase());
       if (Object.keys(f).length) next[i] = f;
     });
+    if (event.ticket_value > 0 && !commitment) next.commitment = true;
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -191,6 +193,24 @@ export default function Register() {
               </p>
             </div>
 
+            {event.ticket_value > 0 && (
+              <div className="bg-gala-light/40 border border-gala-mint/40 rounded-2xl p-5 mb-6">
+                <div className="flex items-start gap-3">
+                  <svg className="w-6 h-6 text-gala-deep flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 109.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1114.625 7.5H12m0 0V21m-8.625-9.75h18c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125h-18c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                  </svg>
+                  <div>
+                    <p className="font-semibold text-gala-dark">
+                      Each ticket is a <span className="text-gala-deep">${event.ticket_value} value</span> — yours free, courtesy of the Giver Army.
+                    </p>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Each reserved seat represents a real cost. If your plans change, please cancel your registration so we can offer your spot to someone on the waitlist.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <form onSubmit={handleReview} className="space-y-5">
               {attendees.map((a, i) => (
                 <AttendeeForm
@@ -223,6 +243,20 @@ export default function Register() {
 
               {event.turnstile_site_key && (
                 <div className="flex justify-center"><div ref={turnstileRef} /></div>
+              )}
+
+              {event.ticket_value > 0 && (
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={commitment}
+                    onChange={(e) => { setCommitment(e.target.checked); setErrors((prev) => { const next = { ...prev }; delete next.commitment; return next; }); }}
+                    className="mt-1 w-4 h-4 rounded border-gray-300 text-gala-deep focus:ring-gala-deep"
+                  />
+                  <span className={`text-sm ${errors.commitment ? 'text-red-600' : 'text-gray-600'}`}>
+                    I understand each ticket is valued at ${event.ticket_value} and I commit to attending. If my plans change, I will cancel my registration so someone else can attend.
+                  </span>
+                </label>
               )}
 
               {serverError && (
@@ -287,9 +321,16 @@ function ReviewStage({ attendees, event, isWaitlist, submitting, serverError, on
       </div>
 
       <div className="card p-6 mb-5">
-        <h3 className="text-sm uppercase tracking-widest text-gray-400 font-semibold mb-3">
-          {total} Attendee{total === 1 ? '' : 's'} ({total} ticket{total === 1 ? '' : 's'})
-        </h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm uppercase tracking-widest text-gray-400 font-semibold">
+            {total} Attendee{total === 1 ? '' : 's'} ({total} ticket{total === 1 ? '' : 's'})
+          </h3>
+          {event.ticket_value > 0 && (
+            <span className="text-sm font-semibold text-gala-deep">
+              ${total * event.ticket_value} value — Complimentary
+            </span>
+          )}
+        </div>
         <ul className="divide-y divide-gray-100">
           {attendees.map((a, i) => (
             <li key={i} className="py-3 first:pt-0 last:pb-0 flex items-center justify-between">

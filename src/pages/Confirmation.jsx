@@ -62,6 +62,16 @@ export default function Confirmation() {
               Check your email for your QR code and ticket details.
             </p>
           )}
+          {!isWaitlist && event.ticket_value > 0 && (
+            <div className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-gala-light/40 border border-gala-mint/30 rounded-full text-sm">
+              <svg className="w-4 h-4 text-gala-deep" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 109.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1114.625 7.5H12m0 0V21m-8.625-9.75h18c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125h-18c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+              </svg>
+              <span className="text-gala-dark font-medium">
+                {attendees.length === 1 ? 'A' : `${attendees.length}`} complimentary ticket{attendees.length === 1 ? '' : 's'} — <span className="text-gala-deep">${attendees.length * event.ticket_value} value</span>, courtesy of the Giver Army
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Event card */}
@@ -158,6 +168,12 @@ export default function Confirmation() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {event.ticket_value > 0 && !isWaitlist && (
+          <div className="mt-8 bg-gray-50 border border-gray-200 rounded-2xl p-5 text-center text-sm text-gray-500">
+            Plans change? No problem — just <Link to={editToken ? `/edit/${editToken}` : '/faq'} className="text-gala-deep font-medium underline underline-offset-2">update your registration</Link> so we can offer your spot to someone on the waitlist. Each seat represents a ${event.ticket_value} investment.
           </div>
         )}
 

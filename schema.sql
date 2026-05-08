@@ -33,6 +33,7 @@ INSERT OR IGNORE INTO event_settings (key, value) VALUES
   ('hero_image_url',      ''),
   ('photos_url',          ''),
   ('next_event_url',      ''),
+  ('ticket_value',        '250'),
   ('turnstile_site_key',  ''),
   ('faq_json',            '[{"q":"What is the dress code?","a":"Black Tie Optional. Dress to celebrate."},{"q":"Is parking available?","a":"Yes — complimentary valet at the front entrance."},{"q":"What time should I arrive?","a":"Doors open 30 minutes before start time. Please arrive early for check-in."},{"q":"Can I bring a guest?","a":"Yes — you can register yourself plus one guest."},{"q":"What should I expect?","a":"A beautiful evening with dinner, live entertainment, inspiring stories, and celebration."}]');
 
