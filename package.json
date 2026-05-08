@@ -11,7 +11,7 @@
     "db:init:remote": "wrangler d1 execute gala-db --remote --file=schema.sql",
     "db:migrate": "wrangler d1 execute gala-db --local --file=migrations/0001_v2_upgrade.sql",
     "db:migrate:remote": "wrangler d1 execute gala-db --remote --file=migrations/0001_v2_upgrade.sql",
-    "deploy": "npm run build && wrangler pages deploy dist"
+    "deploy": "npm run build && wrangler pages deploy dist --branch main"
   },
   "dependencies": {
     "react": "^18.3.1",
