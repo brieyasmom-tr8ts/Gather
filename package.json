@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler pages dev --d1 DB -- vite dev",
-    "build": "vite build",
+    "build": "vite build && cp dist/index.html dist/404.html",
     "preview": "wrangler pages dev dist --d1 DB",
     "db:init": "wrangler d1 execute gala-db --local --file=schema.sql",
     "db:init:remote": "wrangler d1 execute gala-db --remote --file=schema.sql",
