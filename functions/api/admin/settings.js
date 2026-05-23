@@ -9,7 +9,7 @@ const ALLOWED_KEYS = new Set([
   'gala_date', 'start_time', 'end_time', 'time_zone',
   'venue_name', 'venue_address', 'venue_city', 'venue_state',
   'dress_code', 'parking_info', 'arrival_info',
-  'max_capacity', 'edit_cutoff_hours',
+  'max_capacity', 'edit_cutoff_hours', 'ticket_value',
   'giver_army_video_url', 'giver_army_signup_url',
   'photos_url', 'next_event_url',
   'hero_image_url', 'turnstile_site_key',
