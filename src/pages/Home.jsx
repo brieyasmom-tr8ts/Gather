@@ -108,6 +108,25 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Quote */}
+      <section className="py-16 px-6 bg-gala-dark">
+        <div className="max-w-3xl mx-auto text-center">
+          <div className="flex items-center justify-center gap-4 mb-6">
+            <span className="block w-12 h-px bg-gala-mint/40" />
+            <svg className="w-8 h-8 text-gala-mint/60" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M4.583 17.321C3.553 16.227 3 15 3 13.011c0-3.5 2.457-6.637 6.03-8.188l.893 1.378c-3.335 1.804-3.987 4.145-4.247 5.621.537-.278 1.24-.375 1.929-.311 1.804.167 3.226 1.648 3.226 3.489a3.5 3.5 0 01-3.5 3.5c-1.073 0-2.099-.49-2.748-1.179zm10 0C13.553 16.227 13 15 13 13.011c0-3.5 2.457-6.637 6.03-8.188l.893 1.378c-3.335 1.804-3.987 4.145-4.247 5.621.537-.278 1.24-.375 1.929-.311 1.804.167 3.226 1.648 3.226 3.489a3.5 3.5 0 01-3.5 3.5c-1.073 0-2.099-.49-2.748-1.179z" />
+            </svg>
+            <span className="block w-12 h-px bg-gala-mint/40" />
+          </div>
+          <p className="text-2xl md:text-4xl font-bold text-white italic leading-snug tracking-wide">
+            Generosity is the Gateway for the Gospel
+          </p>
+          <div className="mt-6 flex justify-center">
+            <span className="block w-16 h-1 rounded-full bg-gala-mint/50" />
+          </div>
+        </div>
+      </section>
+
       {/* Event Details */}
       <section className="py-20 px-6 bg-white">
         <div className="max-w-4xl mx-auto">
