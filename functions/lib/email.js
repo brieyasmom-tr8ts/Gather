@@ -173,7 +173,7 @@ export async function sendEmail({ apiKey, from, to, subject, html }) {
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: from || DEFAULT_FROM, to: Array.isArray(to) ? to : [to], subject, html }),
+    body: JSON.stringify({ from: from || DEFAULT_FROM, reply_to: 'Heather@GiveSendGo.com', to: Array.isArray(to) ? to : [to], subject, html }),
   });
   if (!res.ok) {
     const text = await res.text().catch(() => '');

@@ -81,6 +81,11 @@ export default function Confirmation() {
           </p>
           <p className="text-gala-dark text-2xl font-extrabold">{event.long_date}</p>
           <p className="text-gray-700 mt-1">{event.time_range}</p>
+          {attendees.some((a) => a.vip_cocktail) && (
+            <p className="text-gala-deep font-semibold mt-2">
+              VIP Cocktail Hour: 6:00 – 6:45 PM
+            </p>
+          )}
           {venueLine && <p className="text-gray-500 mt-2">{venueLine}</p>}
           {event.dress_code && (
             <p className="text-gray-500 mt-3 pt-3 border-t border-gray-100 text-sm">
@@ -131,6 +136,13 @@ export default function Confirmation() {
                       <p>{event.time_range}</p>
                       {venueLine && <p>{venueLine}</p>}
                     </div>
+                    {a.vip_cocktail ? (
+                      <div className="mt-3">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold">
+                          VIP Cocktail Hour · 6:00 PM
+                        </span>
+                      </div>
+                    ) : null}
                     <div className="mt-4 pt-4 border-t border-gray-100">
                       <p className="text-xs text-gray-400">
                         Ticket ID: <span className="font-mono">{a.ticket_id.substring(0, 8).toUpperCase()}</span>

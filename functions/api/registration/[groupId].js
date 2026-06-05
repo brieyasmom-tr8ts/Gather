@@ -13,7 +13,7 @@ export async function onRequestGet(context) {
 
     const attendees = await env.DB.prepare(
       `SELECT ticket_id, first_name, last_name, email, phone,
-              is_giver_army, giver_army_tenure, media_consent,
+              is_giver_army, giver_army_tenure, vip_cocktail, media_consent,
               is_waitlist, checked_in, checked_in_at
        FROM attendees WHERE registration_group_id = ? AND cancelled = 0
        ORDER BY id ASC`
