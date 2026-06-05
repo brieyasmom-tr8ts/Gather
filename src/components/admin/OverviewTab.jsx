@@ -24,6 +24,7 @@ export default function OverviewTab({ stats, refresh, showToast }) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <StatCard label="Groups"          value={stats.groups} />
         <StatCard label="Giver Army"      value={`${stats.giverArmy}${stats.registered ? ` · ${gaPct}%` : ''}`} />
+        <StatCard label="VIP Cocktail"    value={stats.vipCocktail || 0} />
         <StatCard label="Non Giver Army"  value={stats.nonGiverArmy} />
       </div>
 

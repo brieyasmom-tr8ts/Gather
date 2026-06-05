@@ -37,7 +37,7 @@ export async function onRequestGet(context) {
 
     const sql = `
       SELECT ticket_id, first_name, last_name, email, phone,
-             is_giver_army, giver_army_tenure, media_consent,
+             is_giver_army, giver_army_tenure, vip_cocktail, media_consent,
              is_waitlist, waitlist_timestamp,
              checked_in, checked_in_at,
              cancelled, cancelled_at,
@@ -49,7 +49,7 @@ export async function onRequestGet(context) {
     const result = await env.DB.prepare(sql).bind(...binds).all();
     const headers = [
       'Ticket ID', 'First Name', 'Last Name', 'Email', 'Phone',
-      'Giver Army', 'Giver Army Tenure', 'Media Consent',
+      'Giver Army', 'Giver Army Tenure', 'VIP Cocktail', 'Media Consent',
       'Waitlist', 'Waitlist At',
       'Checked In', 'Checked In At',
       'Cancelled', 'Cancelled At',
@@ -59,6 +59,7 @@ export async function onRequestGet(context) {
       r.ticket_id, esc(r.first_name), esc(r.last_name), r.email, esc(r.phone || ''),
       r.is_giver_army ? 'Yes' : 'No',
       r.giver_army_tenure || '',
+      r.vip_cocktail ? 'Yes' : 'No',
       r.media_consent ? 'Yes' : 'No',
       r.is_waitlist ? 'Yes' : 'No',
       r.waitlist_timestamp || '',

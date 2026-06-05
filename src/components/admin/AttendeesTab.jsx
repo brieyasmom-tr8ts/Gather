@@ -179,9 +179,16 @@ export default function AttendeesTab({ showToast, onDataChange }) {
                   <td className="px-4 py-3 text-sm text-gray-500 hidden md:table-cell">{a.email}</td>
                   <td className="px-4 py-3 hidden lg:table-cell">
                     {a.is_giver_army ? (
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-gala-deep bg-gala-mint/20 px-2 py-0.5 rounded-full">
-                        {TENURE_LABEL[a.giver_army_tenure] || 'Giver Army'}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-gala-deep bg-gala-mint/20 px-2 py-0.5 rounded-full">
+                          {TENURE_LABEL[a.giver_army_tenure] || 'Giver Army'}
+                        </span>
+                        {a.vip_cocktail ? (
+                          <span className="inline-flex items-center text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+                            VIP Cocktail
+                          </span>
+                        ) : null}
+                      </div>
                     ) : (<span className="text-xs text-gray-300">—</span>)}
                   </td>
                   <td className="px-4 py-3 text-center">

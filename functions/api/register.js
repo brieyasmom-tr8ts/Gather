@@ -79,14 +79,15 @@ export async function onRequestPost(context) {
         `INSERT INTO attendees (
            ticket_id, registration_group_id,
            first_name, last_name, email, phone,
-           is_giver_army, giver_army_tenure, media_consent,
+           is_giver_army, giver_army_tenure, vip_cocktail, media_consent,
            is_waitlist, waitlist_timestamp
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).bind(
         ticketId, groupId,
         a.firstName.trim(), a.lastName.trim(), a.email.trim().toLowerCase(), (a.phone || '').trim() || null,
         a.giverArmy ? 1 : 0,
         (a.giverArmy && a.giverArmyTenure) ? a.giverArmyTenure : null,
+        (a.giverArmy && a.vipCocktail) ? 1 : 0,
         1,
         isWaitlist ? 1 : 0,
         isWaitlist ? nowIso : null

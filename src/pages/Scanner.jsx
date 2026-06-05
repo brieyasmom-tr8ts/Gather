@@ -70,9 +70,9 @@ export default function Scanner() {
       if (r.status === 401) return navigate('/admin/login');
       const data = await r.json();
       if (data.status === 'checked_in') {
-        setResult({ type: 'success', title: 'Checked in', name: `${data.attendee.first_name} ${data.attendee.last_name}`, detail: data.attendee.email });
+        setResult({ type: 'success', title: 'Checked in', name: `${data.attendee.first_name} ${data.attendee.last_name}`, detail: data.attendee.email, vip: data.attendee.vip_cocktail, giverArmy: data.attendee.is_giver_army });
       } else if (data.status === 'already_checked_in') {
-        setResult({ type: 'warning', title: 'Already checked in', name: `${data.attendee.first_name} ${data.attendee.last_name}`, detail: `at ${new Date(data.attendee.checked_in_at).toLocaleTimeString()}` });
+        setResult({ type: 'warning', title: 'Already checked in', name: `${data.attendee.first_name} ${data.attendee.last_name}`, detail: `at ${new Date(data.attendee.checked_in_at).toLocaleTimeString()}`, vip: data.attendee.vip_cocktail, giverArmy: data.attendee.is_giver_army });
       } else if (data.status === 'waitlist') {
         setResult({ type: 'error', title: 'Waitlist', name: 'This attendee is on the waitlist', detail: 'Please confirm manually before check-in' });
       } else if (data.status === 'cancelled') {
@@ -169,7 +169,11 @@ export default function Scanner() {
                   <div>
                     <p className="font-semibold">{m.first_name} {m.last_name}</p>
                     <p className="text-xs text-gray-500">{m.email}</p>
-                    {m.is_waitlist ? <span className="text-xs text-amber-600">Waitlist</span> : null}
+                    <div className="flex gap-1 mt-1">
+                      {m.is_waitlist ? <span className="text-xs text-amber-600">Waitlist</span> : null}
+                      {m.is_giver_army ? <span className="text-xs font-medium text-teal-600 bg-teal-50 px-1.5 py-0.5 rounded">Giver Army</span> : null}
+                      {m.vip_cocktail ? <span className="text-xs font-medium text-amber-700 bg-yellow-100 px-1.5 py-0.5 rounded">VIP</span> : null}
+                    </div>
                   </div>
                   {m.checked_in ? (
                     <span className="text-xs font-medium text-green-600">Checked in</span>
@@ -204,6 +208,18 @@ function ResultOverlay({ result, onClose }) {
         <h2 className="text-4xl font-extrabold mb-2">{result.title}</h2>
         <p className="text-2xl font-medium mb-1 opacity-95">{result.name}</p>
         {result.detail && <p className="text-lg opacity-80">{result.detail}</p>}
+        <div className="flex justify-center gap-2 mt-4">
+          {result.giverArmy ? (
+            <span className="px-4 py-1.5 rounded-full bg-white/20 text-white text-sm font-bold">
+              Giver Army
+            </span>
+          ) : null}
+          {result.vip ? (
+            <span className="px-4 py-1.5 rounded-full bg-yellow-400 text-gray-900 text-sm font-bold">
+              ⭐ VIP Cocktail Hour
+            </span>
+          ) : null}
+        </div>
       </div>
     </div>
   );

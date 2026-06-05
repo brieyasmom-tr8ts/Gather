@@ -64,6 +64,7 @@ CREATE TABLE IF NOT EXISTS attendees (
 
   is_giver_army           INTEGER NOT NULL DEFAULT 0,
   giver_army_tenure       TEXT,
+  vip_cocktail            INTEGER NOT NULL DEFAULT 0,
   media_consent           INTEGER NOT NULL DEFAULT 0,
 
   is_waitlist             INTEGER NOT NULL DEFAULT 0,

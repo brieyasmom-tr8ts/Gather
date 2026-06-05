@@ -74,6 +74,25 @@ export default function AttendeeForm({ index, attendee, onChange, onRemove, erro
 
         {attendee.giverArmy === true && (
           <div className="mt-4 animate-fade-in">
+            <div className="p-4 bg-gala-mint/10 border border-gala-mint/40 rounded-xl mb-4">
+              <p className="text-sm font-semibold text-gala-dark mb-2">
+                🎉 You're invited to the VIP Cocktail Hour!
+              </p>
+              <p className="text-xs text-gray-600 mb-3">
+                As a Giver Army member, you have exclusive access to a VIP cocktail hour from 6:00 – 6:45 PM before the main event begins.
+              </p>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={attendee.vipCocktail || false}
+                  onChange={(e) => handle('vipCocktail', e.target.checked)}
+                  className="w-5 h-5 accent-gala-deep rounded"
+                />
+                <span className="text-sm font-semibold text-gala-dark">
+                  I'll be attending the VIP Cocktail Hour
+                </span>
+              </label>
+            </div>
             <label className="label">How long have you been part of the Giver Army journey?</label>
             <div className="flex flex-wrap gap-2">
               {GIVER_ARMY_TENURE_OPTIONS.map((o) => (

@@ -9,7 +9,7 @@ export async function onRequestGet(context) {
   if (!q || q.length < 2) return json({ results: [] });
   const pat = `%${q}%`;
   const res = await context.env.DB.prepare(
-    `SELECT id, ticket_id, first_name, last_name, email, is_giver_army, giver_army_tenure,
+    `SELECT id, ticket_id, first_name, last_name, email, is_giver_army, giver_army_tenure, vip_cocktail,
             is_waitlist, checked_in, checked_in_at
      FROM attendees
      WHERE cancelled = 0
@@ -28,12 +28,12 @@ export async function onRequestPost(context) {
   let row;
   if (body.id) {
     row = await env.DB.prepare(
-      `SELECT id, ticket_id, first_name, last_name, email, is_waitlist, cancelled, checked_in, checked_in_at
+      `SELECT id, ticket_id, first_name, last_name, email, is_giver_army, vip_cocktail, is_waitlist, cancelled, checked_in, checked_in_at
        FROM attendees WHERE id = ?`
     ).bind(parseInt(body.id, 10)).first();
   } else if (body.ticketId) {
     row = await env.DB.prepare(
-      `SELECT id, ticket_id, first_name, last_name, email, is_waitlist, cancelled, checked_in, checked_in_at
+      `SELECT id, ticket_id, first_name, last_name, email, is_giver_army, vip_cocktail, is_waitlist, cancelled, checked_in, checked_in_at
        FROM attendees WHERE ticket_id = ?`
     ).bind(body.ticketId).first();
   } else {
@@ -47,7 +47,7 @@ export async function onRequestPost(context) {
   if (row.checked_in) {
     return json({
       status: 'already_checked_in',
-      attendee: { first_name: row.first_name, last_name: row.last_name, email: row.email, checked_in_at: row.checked_in_at },
+      attendee: { first_name: row.first_name, last_name: row.last_name, email: row.email, checked_in_at: row.checked_in_at, is_giver_army: row.is_giver_army, vip_cocktail: row.vip_cocktail },
     });
   }
 
@@ -58,7 +58,7 @@ export async function onRequestPost(context) {
 
   return json({
     status: 'checked_in',
-    attendee: { first_name: row.first_name, last_name: row.last_name, email: row.email, checked_in_at: now },
+    attendee: { first_name: row.first_name, last_name: row.last_name, email: row.email, checked_in_at: now, is_giver_army: row.is_giver_army, vip_cocktail: row.vip_cocktail },
   });
 }
 

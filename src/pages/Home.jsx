@@ -27,50 +27,64 @@ export default function Home() {
           backgroundPosition: 'center',
         } : { background: 'linear-gradient(135deg, #042B3E 0%, #085078 70%, #0A628F 100%)' }}
       >
-        <div className="relative max-w-4xl mx-auto px-6 pt-20 pb-24 md:pt-28 md:pb-32 text-center">
-          <div className="inline-flex items-center gap-2 bg-white/10 text-gala-mint border border-gala-mint/30 text-xs font-semibold uppercase tracking-[0.22em] px-4 py-1.5 rounded-full mb-8 backdrop-blur">
-            <span className="w-1.5 h-1.5 rounded-full bg-gala-mint animate-pulse" />
-            You&rsquo;re Invited
+        <div className="relative max-w-5xl mx-auto px-6 pt-24 pb-28 md:pt-32 md:pb-36">
+          {/* Top — title area, centered */}
+          <div className="text-center mb-16 md:mb-20">
+            <p className="text-gala-mint/80 text-xs font-semibold uppercase tracking-[0.3em] mb-6">
+              GiveSendGo Giver Gala
+            </p>
+            <h1 className="text-white font-extrabold tracking-tight text-6xl md:text-8xl lg:text-9xl leading-[0.9]">
+              {event.name}
+              {event.year && <><br /><span className="text-gala-mint">{event.year}</span></>}
+            </h1>
+            {event.tagline && (
+              <p className="text-white/60 text-lg md:text-xl font-light mt-6 max-w-xl mx-auto">
+                {event.tagline}
+              </p>
+            )}
           </div>
 
-          <h1 className="text-white font-extrabold tracking-tight text-5xl md:text-7xl lg:text-8xl mb-4">
-            {event.name}
-            {event.year && <span className="text-gala-mint ml-3 md:ml-5">{event.year}</span>}
-          </h1>
-          {event.tagline && (
-            <p className="text-white/85 text-lg md:text-xl font-light max-w-2xl mx-auto mb-12">
-              {event.tagline}
-            </p>
-          )}
-
-          {/* Primary event facts — one line, no eyebrow, no box */}
-          <p className="text-white text-xl md:text-2xl font-semibold mb-1">
-            {event.long_date}
-          </p>
-          <p className="text-white/80 text-base md:text-lg mb-2">{event.time_range}</p>
-          {venueLine && (
-            <p className="text-white/60 text-sm md:text-base">{venueLine}</p>
-          )}
-
-          <div className="mt-10 mb-8">
-            <Countdown label={countdown.label} />
+          {/* Middle — event info cards in a row */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto mb-14">
+            <div className="bg-white/[0.07] backdrop-blur-sm rounded-2xl px-6 py-5 text-center border border-white/10">
+              <p className="text-gala-mint text-[10px] font-bold uppercase tracking-[0.2em] mb-1">When</p>
+              <p className="text-white font-semibold text-lg">{event.long_date}</p>
+            </div>
+            <div className="bg-white/[0.07] backdrop-blur-sm rounded-2xl px-6 py-5 text-center border border-white/10">
+              <p className="text-gala-mint text-[10px] font-bold uppercase tracking-[0.2em] mb-1">Schedule</p>
+              <p className="text-white font-bold text-lg">Gala 7:00 – 10:00 PM</p>
+              <p className="text-white/60 text-sm mt-1">VIP Cocktail Hour 6:00 PM</p>
+              <p className="text-white/40 text-xs">Giver Army members</p>
+            </div>
+            <div className="bg-white/[0.07] backdrop-blur-sm rounded-2xl px-6 py-5 text-center border border-white/10">
+              <p className="text-gala-mint text-[10px] font-bold uppercase tracking-[0.2em] mb-1">Where</p>
+              <p className="text-white font-semibold text-sm leading-snug">{event.venue_name}</p>
+              <p className="text-white/60 text-xs mt-0.5">{[event.venue_city, event.venue_state].filter(Boolean).join(', ')}</p>
+            </div>
           </div>
 
-          <Link
-            to="/register"
-            className="inline-flex items-center gap-3 bg-gala-mint text-gala-dark px-10 py-4 rounded-full text-lg font-extrabold hover:bg-white transition-all shadow-xl shadow-gala-mint/20 active:scale-[0.98]"
-          >
-            {event.is_full ? 'Join Waitlist' : 'Reserve Your Spot'}
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-            </svg>
-          </Link>
+          {/* Bottom — CTA + countdown */}
+          <div className="text-center">
+            <Link
+              to="/register"
+              className="inline-flex items-center gap-3 bg-gala-mint text-gala-dark px-10 py-4 rounded-full text-lg font-extrabold hover:bg-white transition-all shadow-xl shadow-gala-mint/20 active:scale-[0.98]"
+            >
+              {event.is_full ? 'Join Waitlist' : 'Reserve Your Spot'}
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+            </Link>
 
-          {showRemaining && (
-            <p className="mt-8 text-xs uppercase tracking-[0.22em] font-semibold text-gala-mint">
-              Only {event.available} spot{event.available === 1 ? '' : 's'} left
-            </p>
-          )}
+            {showRemaining && (
+              <p className="mt-4 text-xs uppercase tracking-[0.22em] font-semibold text-gala-mint">
+                Only {event.available} spot{event.available === 1 ? '' : 's'} left
+              </p>
+            )}
+
+            <div className="mt-10">
+              <Countdown label={countdown.label} />
+            </div>
+          </div>
         </div>
       </section>
 

@@ -44,7 +44,7 @@ export async function onRequestGet(context) {
     const sql = `
       SELECT id, ticket_id, registration_group_id,
              first_name, last_name, email, phone,
-             is_giver_army, giver_army_tenure, media_consent,
+             is_giver_army, giver_army_tenure, vip_cocktail, media_consent,
              is_waitlist, waitlist_timestamp,
              checked_in, checked_in_at,
              cancelled, cancelled_at,
