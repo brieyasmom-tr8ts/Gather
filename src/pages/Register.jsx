@@ -14,6 +14,7 @@ const emptyAttendee = () => ({
   dietaryNeeds: '',
   accessibilityNeeds: '',
   photoConsent: true,
+  vipCocktail: false,
 });
 
 export default function Register() {
@@ -142,6 +143,7 @@ export default function Register() {
             dietaryNeeds: a.dietaryNeeds.trim() || null,
             accessibilityNeeds: a.accessibilityNeeds.trim() || null,
             photoConsent: a.photoConsent !== false,
+            vipCocktail: a.giverArmy && a.vipCocktail ? true : false,
           })),
         }),
       });

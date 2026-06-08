@@ -97,8 +97,8 @@ export async function onRequestPost(context) {
       const ticketId = crypto.randomUUID();
 
       await env.DB.prepare(
-        `INSERT INTO attendees (ticket_id, first_name, last_name, email, phone, registration_group_id, giver_army, giver_army_tenure, dietary_needs, accessibility_needs, photo_consent, is_waitlist)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO attendees (ticket_id, first_name, last_name, email, phone, registration_group_id, giver_army, giver_army_tenure, dietary_needs, accessibility_needs, photo_consent, is_waitlist, vip_cocktail)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).bind(
         ticketId,
         a.firstName.trim(),
@@ -111,7 +111,8 @@ export async function onRequestPost(context) {
         a.dietaryNeeds?.trim() || null,
         a.accessibilityNeeds?.trim() || null,
         a.photoConsent !== false ? 1 : 0,
-        isWaitlist ? 1 : 0
+        isWaitlist ? 1 : 0,
+        a.vipCocktail ? 1 : 0
       ).run();
 
       createdAttendees.push({

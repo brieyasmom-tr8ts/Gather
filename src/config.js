@@ -1,18 +1,18 @@
 export const EVENT = {
-  name: 'GiveSendGo Gala',
+  name: 'Celebrate',
   year: '2026',
   tagline: 'An Evening of Celebration & Generosity',
-  date: 'Saturday, June 6, 2026',
-  time: '6:00 PM - 11:00 PM',
-  location: 'The Grand Ballroom',
-  address: 'Nashville, TN',
+  date: 'Friday, November 7, 2026',
+  time: '7:00 PM - 10:00 PM',
+  location: 'DoubleTree by Hilton Orlando Theme Park Resort',
+  address: '10100 International Drive, Orlando, FL',
   description:
     'Join us for an unforgettable evening celebrating the power of generosity. Enjoy fine dining, inspiring stories, live entertainment, and the company of those who believe in giving.',
 
   // For calendar links
-  calendarStart: '20260606T180000',
-  calendarEnd: '20260606T230000',
-  calendarLocation: 'The Grand Ballroom, Nashville, TN',
+  calendarStart: '20261107T190000',
+  calendarEnd: '20261107T220000',
+  calendarLocation: 'DoubleTree by Hilton Orlando Theme Park Resort, 10100 International Drive, Orlando, FL',
 };
 
 export const GIVER_ARMY_TENURE_OPTIONS = [

@@ -111,6 +111,7 @@ export default function AttendeeForm({ index, attendee, onChange, onRemove, erro
           <GiverArmyField
             giverArmy={attendee.giverArmy}
             giverArmyTenure={attendee.giverArmyTenure}
+            vipCocktail={attendee.vipCocktail}
             onChange={handleGiverArmyChange}
           />
 

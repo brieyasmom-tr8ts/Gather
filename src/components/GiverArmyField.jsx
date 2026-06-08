@@ -1,7 +1,7 @@
 import { GIVER_ARMY_TENURE_OPTIONS } from '../config';
 import { useEvent } from '../hooks/useEvent';
 
-export default function GiverArmyField({ giverArmy, giverArmyTenure, onChange }) {
+export default function GiverArmyField({ giverArmy, giverArmyTenure, vipCocktail, onChange }) {
   const { event } = useEvent();
 
   return (
@@ -61,9 +61,30 @@ export default function GiverArmyField({ giverArmy, giverArmyTenure, onChange })
             ))}
           </div>
           {giverArmy && (
-            <p className="text-xs text-gala-deep mt-2 font-medium animate-fade-in">
-              Welcome to the family!
-            </p>
+            <div className="mt-4 bg-gradient-to-br from-gala-deep to-gala-dark rounded-2xl p-5 animate-fade-in">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">🥂</span>
+                <div className="flex-1">
+                  <h4 className="text-white font-bold text-sm mb-1">
+                    VIP Cocktail Hour
+                  </h4>
+                  <p className="text-white/80 text-xs leading-relaxed mb-3">
+                    As a Giver Army member, you&rsquo;re invited to an exclusive VIP Cocktail Hour before the gala begins. Mingle with fellow givers and special guests in an intimate setting.
+                  </p>
+                  <label className="flex items-center gap-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={vipCocktail || false}
+                      onChange={(e) => onChange({ vipCocktail: e.target.checked })}
+                      className="w-4 h-4 rounded border-white/30 text-gala-mint focus:ring-gala-mint bg-white/10"
+                    />
+                    <span className="text-gala-mint text-sm font-semibold">
+                      Yes, I&rsquo;ll attend the VIP Cocktail Hour!
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </div>
