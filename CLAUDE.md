@@ -1,62 +1,49 @@
-# CLAUDE.md
+# Gather — GiveSendGo Giver Gala Registration
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## Project overview
+Event registration site for the GiveSendGo Giver Gala. React frontend + Cloudflare Pages Functions backend with D1 (SQLite) database.
 
-## What Is This?
+## Tech stack
+- **Frontend**: React 18, Vite, Tailwind CSS, React Router
+- **Backend**: Cloudflare Pages Functions (Workers runtime)
+- **Database**: Cloudflare D1 (SQLite)
+- **Email**: Resend API
+- **QR**: html5-qrcode (scanning), qrcode (generation)
 
-Gather is a GiveSendGo Gala event registration web app. Attendees register (multi-guest), receive QR code tickets via email, and check in at the event. Admins manage attendees, send bulk emails, and scan QR codes.
+## Key directories
+- `src/` — React app (pages, components, hooks)
+- `functions/` — Cloudflare Pages Functions (`/api/*` routes)
+- `functions/lib/` — Shared server utilities (auth, email, event config)
+- `public/` — Static assets
+- `schema.sql` — Full D1 schema
+- `migrations/` — Incremental DB migrations
 
-## Architecture
-
-- **Frontend**: React 18 + Vite + Tailwind CSS, deployed to Cloudflare Pages
-- **Backend**: Cloudflare Pages Functions (Workers runtime) — file-based routing in `functions/`
-- **Database**: Cloudflare D1 (SQLite), binding `DB`, database name `gala-db`
-- **Email**: Brevo API (`api.brevo.com/v3/smtp/email`) — NOT Resend despite README mention
-- **Bot protection**: Cloudflare Turnstile + honeypot field
-- **Auth**: Custom HMAC-SHA256 tokens via `crypto.subtle`, stored in HttpOnly cookie `gala_admin_session` (24h TTL)
-- **QR codes**: `qrcode` npm package (SVG), `html5-qrcode` for scanner
-
-### API routing
-
-Pages Functions use file-based routing (`functions/api/`). Admin endpoints are protected by `functions/api/admin/_middleware.js` which verifies the auth cookie. Non-admin endpoints (`register.js`, `event.js`, `registration/`, `ticket/`) are public.
-
-### Event configuration
-
-Event details (name, date, location, etc.) live in the `event_settings` D1 table (singleton row, `id=1`). The frontend fetches these via `/api/event` using the `useEvent()` hook, with hardcoded fallbacks in `src/config.js`. Both the frontend config and email templates have fallback defaults — keep them in sync.
-
-### Database schema
-
-Two main tables: `registrations` (groups) and `attendees` (individual tickets). `event_settings` is a singleton config table. See `schema.sql` for full schema. Key fields on attendees: `ticket_id` (unique UUID), `is_waitlist`, `checked_in`, `cancelled`, `giver_army` + `giver_army_tenure`.
-
-## Commands
-
+## Development
 ```bash
-# Local development (runs at http://localhost:8788)
-npm run dev
-
-# Build frontend
-npm run build
-
-# Deploy (build + push to Cloudflare Pages)
-npm run deploy
-
-# Database
-npm run db:init              # init D1 locally
-npm run db:init:remote       # init D1 in production
-npx wrangler d1 execute gala-db --remote --command "SQL HERE"
-
-# Frontend deploy via git (auto-deploys on push)
-git add -A && git commit -m "message" && git push origin main
+npm install
+npm run db:init        # create local D1 tables
+npm run dev            # wrangler pages dev + vite (localhost:8788)
 ```
 
-## Key Patterns
+## Environment variables
+Secrets go in `.dev.vars` locally (see `.dev.vars.example`):
+`ADMIN_PASSWORD`, `AUTH_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM`, `BASE_URL`
 
-- Registration accepts 1–10 attendees per group, each gets a unique `ticket_id` (UUID)
-- Ticket display ID is first 8 chars of UUID, uppercased
-- Soft-delete for cancellation (`cancelled` flag, not row deletion)
-- Admin migrations run in-browser via `/api/admin/migrate` endpoint
-- Tailwind custom colors: `primary-*` (blue) and `gala-*` (`dark`, `deep`, `mint`, `light`)
+## Deploy
+```bash
+npm run deploy         # builds + deploys to Cloudflare Pages
+```
 
-## Environment Variables
+## Design palette
+- Dark navy: `#042B3E` (gala-dark)
+- Deep blue: `#085078` (gala-deep)
+- Mint: `#85D8CE` (gala-mint)
+- Light mint: `#B8EAE4` (gala-light)
+- Primary/red accent: `#E8553D`
+- Font: Inter
 
-Set in Cloudflare Pages dashboard: `ADMIN_PASSWORD`, `AUTH_SECRET`, `RESEND_API_KEY` (actually Brevo key), `EMAIL_FROM`, `BASE_URL`, `MAX_ATTENDEES`, `TURNSTILE_SECRET_KEY` (optional), `TURNSTILE_SITE_KEY` (optional).
+## Architecture notes
+- All public event content is driven by `event_settings` in D1 — editable from the admin Settings tab
+- Admin auth uses HMAC-signed session cookies (`functions/lib/auth.js`)
+- Registration enforces one email per event via a partial unique index
+- Waitlist mode activates automatically when capacity is reached

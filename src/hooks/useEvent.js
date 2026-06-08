@@ -1,54 +1,33 @@
 import { useEffect, useState } from 'react';
-import { EVENT as FALLBACK } from '../config';
-
-// Fallback values aligned with new API shape
-const DEFAULTS = {
-  name: FALLBACK.name,
-  year: FALLBACK.year,
-  tagline: FALLBACK.tagline,
-  event_date: FALLBACK.date,
-  event_time: FALLBACK.time,
-  location: FALLBACK.location,
-  address: FALLBACK.address,
-  description: FALLBACK.description,
-  dress_code: 'Black Tie Optional',
-  faq_parking: 'Complimentary valet parking is available at the venue entrance.',
-  faq_what_to_expect: 'A beautiful evening with dinner, live entertainment, inspiring stories, and celebration.',
-  calendar_start: FALLBACK.calendarStart,
-  calendar_end: FALLBACK.calendarEnd,
-  iso_start: '2026-06-06T18:00:00',
-  max_attendees: 0,
-  giver_army_signup_url: 'https://www.giverarmy.com',
-  giver_army_video_url: '',
-  registered: 0,
-  available: null,
-  is_full: false,
-  turnstile_site_key: null,
-};
+import { FALLBACK_EVENT } from '../config';
 
 export function useEvent() {
-  const [event, setEvent] = useState(DEFAULTS);
+  const [event, setEvent] = useState(FALLBACK_EVENT);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
     fetch('/api/event')
-      .then((r) => r.ok ? r.json() : null)
+      .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (data) setEvent({ ...DEFAULTS, ...data });
+        if (!cancelled && data) setEvent({ ...FALLBACK_EVENT, ...data });
       })
       .catch(() => {})
-      .finally(() => setLoading(false));
+      .finally(() => !cancelled && setLoading(false));
+    return () => { cancelled = true; };
   }, []);
 
-  return { event, loading };
+  return { event, loading, reload: () => setEvent((e) => ({ ...e })) };
 }
 
+/** Build calendar links that match the event's stored dates. */
 export function buildGoogleCalendarUrl(event) {
   const params = new URLSearchParams({
     action: 'TEMPLATE',
-    text: `${event.name} ${event.year}`,
+    text: `${event.name}${event.year ? ' ' + event.year : ''}`,
     dates: `${event.calendar_start}/${event.calendar_end}`,
-    location: `${event.location}, ${event.address}`,
+    location: [event.venue_name, [event.venue_city, event.venue_state].filter(Boolean).join(', ')]
+      .filter(Boolean).join(', '),
     details: event.description || '',
   });
   return `https://calendar.google.com/calendar/render?${params}`;
@@ -60,13 +39,24 @@ export function buildIcsContent(event) {
     'VERSION:2.0',
     'PRODID:-//GiveSendGo//Gala//EN',
     'BEGIN:VEVENT',
-    `UID:${event.name.toLowerCase().replace(/\s+/g, '-')}-${event.year}@giverarmy.com`,
+    `UID:${(event.name || 'event').toLowerCase().replace(/\s+/g, '-')}-${event.year || ''}@givesendgo.com`,
     `DTSTART:${event.calendar_start}`,
     `DTEND:${event.calendar_end}`,
-    `SUMMARY:${event.name} ${event.year}`,
-    `LOCATION:${event.location}, ${event.address}`,
+    `SUMMARY:${event.name}${event.year ? ' ' + event.year : ''}`,
+    `LOCATION:${[event.venue_name, [event.venue_city, event.venue_state].filter(Boolean).join(', ')]
+      .filter(Boolean).join(', ')}`,
     `DESCRIPTION:${event.description || ''}`,
     'END:VEVENT',
     'END:VCALENDAR',
   ].join('\r\n');
+}
+
+export function downloadIcs(event, filename) {
+  const blob = new Blob([buildIcsContent(event)], { type: 'text/calendar' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename || `${(event.name || 'event').toLowerCase().replace(/\s+/g, '-')}.ics`;
+  a.click();
+  URL.revokeObjectURL(url);
 }

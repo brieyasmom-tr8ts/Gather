@@ -1,496 +1,111 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import OverviewTab from '../components/admin/OverviewTab';
+import AttendeesTab from '../components/admin/AttendeesTab';
+import EmailTab from '../components/admin/EmailTab';
+import SettingsTab from '../components/admin/SettingsTab';
+
+const TABS = [
+  { id: 'overview',   label: 'Overview' },
+  { id: 'attendees',  label: 'Attendees' },
+  { id: 'email',      label: 'Email' },
+  { id: 'settings',   label: 'Settings' },
+];
 
 export default function Admin() {
   const navigate = useNavigate();
+  const [tab, setTab] = useState(() => window.location.hash.replace('#', '') || 'overview');
   const [stats, setStats] = useState(null);
-  const [attendees, setAttendees] = useState([]);
-  const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [resending, setResending] = useState(null);
-  const [deleting, setDeleting] = useState(null);
   const [toast, setToast] = useState(null);
-  const [sortField, setSortField] = useState('created_at');
-  const [sortDir, setSortDir] = useState('desc');
-  const [filter, setFilter] = useState('active');
-  const [bulkEmailOpen, setBulkEmailOpen] = useState(false);
 
-  const showToast = (message, type = 'success') => {
+  const showToast = useCallback((message, type = 'success') => {
     setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
-  };
+    setTimeout(() => setToast(null), 3200);
+  }, []);
 
-  const fetchData = useCallback(async () => {
+  const loadStats = useCallback(async () => {
     try {
-      const [statsRes, attendeesRes] = await Promise.all([
-        fetch('/api/admin/stats'),
-        fetch(`/api/admin/attendees${search ? `?search=${encodeURIComponent(search)}` : ''}`),
-      ]);
+      const r = await fetch('/api/admin/stats');
+      if (r.status === 401) return navigate('/admin/login');
+      if (r.ok) setStats(await r.json());
+    } catch {}
+  }, [navigate]);
 
-      if (statsRes.status === 401 || attendeesRes.status === 401) {
-        navigate('/admin/login');
-        return;
-      }
+  useEffect(() => { loadStats(); }, [loadStats]);
 
-      setStats(await statsRes.json());
-      const data = await attendeesRes.json();
-      setAttendees(Array.isArray(data.attendees) ? data.attendees : []);
-    } catch {
-      showToast('Failed to load data', 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [search, navigate]);
-
+  // Sync tab with URL hash
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    window.location.hash = tab;
+  }, [tab]);
 
-  const sortedAttendees = useMemo(() => {
-    const list = Array.isArray(attendees) ? attendees : [];
-    let filtered = list;
-    if (filter === 'active') filtered = list.filter((a) => !a.cancelled && !a.is_waitlist);
-    else if (filter === 'pending') filtered = list.filter((a) => !a.cancelled && !a.is_waitlist && !a.checked_in);
-    else if (filter === 'checked_in') filtered = list.filter((a) => !a.cancelled && a.checked_in);
-    else if (filter === 'waitlist') filtered = list.filter((a) => !a.cancelled && a.is_waitlist);
-    else if (filter === 'cancelled') filtered = list.filter((a) => a.cancelled);
-
-    const sorted = [...filtered].sort((a, b) => {
-      let aVal, bVal;
-      if (sortField === 'name') {
-        aVal = `${a.first_name} ${a.last_name}`.toLowerCase();
-        bVal = `${b.first_name} ${b.last_name}`.toLowerCase();
-      } else if (sortField === 'email') {
-        aVal = (a.email || '').toLowerCase();
-        bVal = (b.email || '').toLowerCase();
-      } else if (sortField === 'giver_army') {
-        aVal = a.giver_army ? 1 : 0;
-        bVal = b.giver_army ? 1 : 0;
-      } else if (sortField === 'created_at') {
-        aVal = a.created_at;
-        bVal = b.created_at;
-      } else {
-        return 0;
-      }
-      if (aVal < bVal) return sortDir === 'asc' ? -1 : 1;
-      if (aVal > bVal) return sortDir === 'asc' ? 1 : -1;
-      return 0;
-    });
-    return sorted;
-  }, [attendees, sortField, sortDir, filter]);
-
-  const toggleSort = (field) => {
-    if (sortField === field) {
-      setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDir('asc');
-    }
+  const logout = async () => {
+    await fetch('/api/admin/logout', { method: 'POST' });
+    navigate('/admin/login');
   };
-
-  const handleExport = async () => {
-    try {
-      const res = await fetch('/api/admin/export');
-      if (res.status === 401) { navigate('/admin/login'); return; }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `gala-attendees-${new Date().toISOString().slice(0, 10)}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      showToast('Export failed', 'error');
-    }
-  };
-
-  const handleResend = async (attendeeId) => {
-    setResending(attendeeId);
-    try {
-      const res = await fetch('/api/admin/resend-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ attendeeId }),
-      });
-      if (res.status === 401) { navigate('/admin/login'); return; }
-      if (res.ok) {
-        showToast('Email sent successfully');
-      } else {
-        showToast('Failed to send email', 'error');
-      }
-    } catch {
-      showToast('Failed to send email', 'error');
-    } finally {
-      setResending(null);
-    }
-  };
-
-  const handleCancel = async (attendee) => {
-    const isCancelled = attendee.cancelled;
-    const action = isCancelled ? 'Restore' : 'Cancel';
-    if (!confirm(`${action} ticket for ${attendee.first_name} ${attendee.last_name}?`)) return;
-
-    setDeleting(attendee.id);
-    try {
-      const res = await fetch('/api/admin/delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ attendeeId: attendee.id, cancel: !isCancelled }),
-      });
-      if (res.status === 401) { navigate('/admin/login'); return; }
-      if (res.ok) {
-        showToast(isCancelled ? 'Ticket restored' : 'Ticket cancelled');
-        fetchData();
-      } else {
-        showToast('Failed to update', 'error');
-      }
-    } catch {
-      showToast('Failed to update', 'error');
-    } finally {
-      setDeleting(null);
-    }
-  };
-
-  const handleManualCheckIn = async (ticketId) => {
-    try {
-      const res = await fetch('/api/admin/check-in', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ticketId }),
-      });
-      if (res.status === 401) { navigate('/admin/login'); return; }
-      const data = await res.json();
-      if (data.status === 'checked_in') {
-        showToast(`${data.attendee.first_name} checked in!`);
-        fetchData();
-      } else if (data.status === 'already_checked_in') {
-        showToast('Already checked in', 'warning');
-      }
-    } catch {
-      showToast('Check-in failed', 'error');
-    }
-  };
-
-  const formatDate = (dateStr) => {
-    if (!dateStr) return '';
-    const d = new Date(dateStr.replace(' ', 'T') + 'Z');
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin w-8 h-8 border-4 border-gala-mint/30 border-t-gala-deep rounded-full" />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-white border-b border-gray-100 sticky top-0 z-20">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <h1 className="text-lg font-bold text-gray-900">Event Dashboard</h1>
-          <div className="flex items-center gap-2 flex-wrap">
+        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-6">
+            <h1 className="text-lg font-extrabold text-gala-dark">Admin</h1>
+            <nav className="hidden md:flex gap-1">
+              {TABS.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setTab(t.id)}
+                  className={`px-3 py-1.5 rounded-full text-sm font-semibold transition ${
+                    tab === t.id ? 'bg-gala-dark text-white' : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+          <div className="flex items-center gap-2">
             <Link to="/admin/scanner" className="btn-primary text-sm py-2">
-              Scanner
+              <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
+              </svg>
+              Check-In
             </Link>
-            <Link to="/admin/settings" className="btn-secondary text-sm py-2">
-              Settings
-            </Link>
-            <button onClick={() => setBulkEmailOpen(true)} className="btn-secondary text-sm py-2">
-              Email All
-            </button>
-            <button onClick={handleExport} className="btn-secondary text-sm py-2">
-              Export CSV
+            <button onClick={logout} className="text-sm text-gray-500 hover:text-gray-800 px-3 py-2">
+              Log out
             </button>
           </div>
         </div>
+
+        {/* Mobile tab bar */}
+        <nav className="md:hidden flex overflow-x-auto border-t border-gray-100 px-2">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`flex-shrink-0 px-4 py-3 text-sm font-semibold border-b-2 transition ${
+                tab === t.id ? 'border-gala-deep text-gala-dark' : 'border-transparent text-gray-500'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </nav>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 py-8">
-        {/* Stats */}
-        {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <StatCard label="Total Registered" value={stats.total} />
-            <StatCard label="Checked In" value={stats.checkedIn} accent="green" />
-            <StatCard label="Giver Army" value={stats.giverArmy || 0} accent="mint" />
-            <StatCard label="Others" value={stats.others || 0} />
-          </div>
-        )}
-
-        {/* Search + Filter */}
-        <div className="mb-6 flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-            </svg>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name or email..."
-              className="input-field pl-12"
-            />
-          </div>
-          <select
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="input-field sm:w-48"
-          >
-            <option value="active">Active Tickets</option>
-            <option value="pending">Pending Check-In</option>
-            <option value="checked_in">Checked In</option>
-            <option value="waitlist">Waitlist</option>
-            <option value="cancelled">Cancelled</option>
-            <option value="all">All</option>
-          </select>
-        </div>
-
-        {/* Attendee Table */}
-        <div className="card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-100">
-                  <SortHeader label="Name" field="name" sortField={sortField} sortDir={sortDir} onClick={toggleSort} />
-                  <SortHeader label="Email" field="email" sortField={sortField} sortDir={sortDir} onClick={toggleSort} className="hidden md:table-cell" />
-                  <SortHeader label="Giver Army" field="giver_army" sortField={sortField} sortDir={sortDir} onClick={toggleSort} className="hidden lg:table-cell" />
-                  <SortHeader label="Registered" field="created_at" sortField={sortField} sortDir={sortDir} onClick={toggleSort} className="hidden lg:table-cell" />
-                  <th className="text-center text-xs font-semibold text-gray-500 uppercase tracking-wider px-6 py-3">Status</th>
-                  <th className="text-right text-xs font-semibold text-gray-500 uppercase tracking-wider px-6 py-3">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {sortedAttendees.map((a) => (
-                  <tr key={a.id} className={`hover:bg-gray-50/50 transition-colors ${a.cancelled ? 'opacity-60' : ''}`}>
-                    <td className="px-6 py-4">
-                      <p className={`font-medium ${a.cancelled ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
-                        {a.first_name} {a.last_name}
-                      </p>
-                      <p className="text-sm text-gray-400 md:hidden">{a.email}</p>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500 hidden md:table-cell">{a.email}</td>
-                    <td className="px-6 py-4 hidden lg:table-cell">
-                      {a.giver_army ? (
-                        <span className="inline-flex items-center gap-1 text-xs font-medium text-gala-deep bg-gala-mint/20 px-2 py-1 rounded-full">
-                          Yes {a.giver_army_tenure && `\u00B7 ${a.giver_army_tenure}`}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-gray-400">&mdash;</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500 hidden lg:table-cell">{formatDate(a.created_at)}</td>
-                    <td className="px-6 py-4 text-center">
-                      {a.cancelled ? (
-                        <span className="inline-flex items-center gap-1 text-xs font-medium text-red-700 bg-red-50 px-2.5 py-1 rounded-full">
-                          <span className="w-1.5 h-1.5 bg-red-500 rounded-full" />
-                          Cancelled
-                        </span>
-                      ) : a.checked_in ? (
-                        <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-2.5 py-1 rounded-full">
-                          <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
-                          Checked In
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-xs text-gray-400">
-                          <span className="w-1.5 h-1.5 bg-gray-300 rounded-full" />
-                          Pending
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-3">
-                        {!a.cancelled && !a.checked_in && (
-                          <button
-                            onClick={() => handleManualCheckIn(a.ticket_id)}
-                            className="text-xs text-gala-deep hover:text-gala-dark font-medium"
-                            title="Manual check-in"
-                          >
-                            Check In
-                          </button>
-                        )}
-                        {!a.cancelled && (
-                          <button
-                            onClick={() => handleResend(a.id)}
-                            disabled={resending === a.id}
-                            className="text-xs text-gray-400 hover:text-gray-600 font-medium disabled:opacity-50"
-                            title="Resend email"
-                          >
-                            {resending === a.id ? '...' : 'Resend'}
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleCancel(a)}
-                          disabled={deleting === a.id}
-                          className={`text-xs font-medium disabled:opacity-50 ${
-                            a.cancelled
-                              ? 'text-gala-deep hover:text-gala-dark'
-                              : 'text-red-500 hover:text-red-700'
-                          }`}
-                          title={a.cancelled ? 'Restore ticket' : 'Cancel ticket'}
-                        >
-                          {deleting === a.id ? '...' : a.cancelled ? 'Restore' : 'Cancel'}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {sortedAttendees.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-gray-400">
-                      {search ? 'No attendees match your search.' : 'No registrations yet.'}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+      <main className="max-w-7xl mx-auto px-6 py-8">
+        {tab === 'overview' && <OverviewTab stats={stats} refresh={loadStats} showToast={showToast} />}
+        {tab === 'attendees' && <AttendeesTab showToast={showToast} onDataChange={loadStats} />}
+        {tab === 'email' && <EmailTab showToast={showToast} />}
+        {tab === 'settings' && <SettingsTab showToast={showToast} onSaved={loadStats} />}
       </main>
 
-      {/* Toast */}
       {toast && (
-        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-slide-up
-          px-6 py-3 rounded-xl text-white font-medium shadow-xl text-sm
-          ${toast.type === 'error' ? 'bg-red-500' : toast.type === 'warning' ? 'bg-amber-500' : 'bg-green-500'}
-        `}>
+        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-slide-up px-5 py-3 rounded-xl text-white font-medium shadow-xl text-sm ${
+          toast.type === 'error' ? 'bg-red-500' : toast.type === 'warning' ? 'bg-amber-500' : 'bg-green-500'
+        }`}>
           {toast.message}
         </div>
       )}
-
-      {bulkEmailOpen && (
-        <BulkEmailModal
-          onClose={() => setBulkEmailOpen(false)}
-          onResult={(msg, type) => showToast(msg, type)}
-        />
-      )}
-    </div>
-  );
-}
-
-function BulkEmailModal({ onClose, onResult }) {
-  const [subject, setSubject] = useState('');
-  const [message, setMessage] = useState('');
-  const [audience, setAudience] = useState('active');
-  const [sending, setSending] = useState(false);
-
-  const send = async () => {
-    if (!subject.trim() || !message.trim()) {
-      onResult('Subject and message required', 'error');
-      return;
-    }
-    if (!confirm(`Send this email to the selected audience?\n\nSubject: ${subject}`)) return;
-
-    setSending(true);
-    try {
-      const res = await fetch('/api/admin/bulk-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject, message, audience }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        onResult(`Sent to ${data.sent}/${data.total} recipients`);
-        onClose();
-      } else {
-        onResult(data.error || 'Send failed', 'error');
-      }
-    } catch {
-      onResult('Send failed', 'error');
-    } finally {
-      setSending(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-40 bg-black/50 flex items-center justify-center p-4 animate-fade-in">
-      <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-        <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-gray-900">Email All Attendees</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-        <div className="p-6 space-y-4">
-          <div>
-            <label className="label">Audience</label>
-            <select value={audience} onChange={(e) => setAudience(e.target.value)} className="input-field">
-              <option value="active">Active Tickets</option>
-              <option value="pending">Pending Check-In</option>
-              <option value="checked_in">Checked In</option>
-              <option value="waitlist">Waitlist</option>
-              <option value="all">Everyone (not cancelled)</option>
-            </select>
-          </div>
-          <div>
-            <label className="label">Subject</label>
-            <input
-              type="text"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              placeholder="Important update about the Gala"
-              className="input-field"
-            />
-          </div>
-          <div>
-            <label className="label">Message</label>
-            <textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Hi everyone, ..."
-              rows={8}
-              className="input-field"
-            />
-            <p className="text-xs text-gray-400 mt-1">Line breaks will be preserved.</p>
-          </div>
-        </div>
-        <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
-          <button onClick={onClose} className="btn-secondary">Cancel</button>
-          <button onClick={send} disabled={sending} className="btn-primary">
-            {sending ? 'Sending...' : 'Send Email'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SortHeader({ label, field, sortField, sortDir, onClick, className = '' }) {
-  const active = sortField === field;
-  return (
-    <th
-      onClick={() => onClick(field)}
-      className={`text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-6 py-3 cursor-pointer select-none hover:text-gala-deep transition-colors ${className}`}
-    >
-      <span className="inline-flex items-center gap-1">
-        {label}
-        {active && (
-          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            {sortDir === 'asc' ? (
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
-            ) : (
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-            )}
-          </svg>
-        )}
-      </span>
-    </th>
-  );
-}
-
-function StatCard({ label, value, accent }) {
-  const textColor = {
-    green: 'text-green-700',
-    mint: 'text-gala-deep',
-  }[accent] || 'text-gray-900';
-
-  return (
-    <div className="card p-5">
-      <p className="text-sm font-medium text-gray-500 mb-1">{label}</p>
-      <p className={`text-3xl font-bold ${textColor}`}>{value}</p>
     </div>
   );
 }

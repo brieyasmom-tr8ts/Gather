@@ -1,50 +1,69 @@
+// Admin attendee list with search + filters.
+// Query params:
+//   search           substring match on name/email
+//   checked_in       yes|no
+//   giver_army       yes|no
+//   tenure           tenure key
+//   waitlist         yes|no
+//   cancelled        yes|no (default: exclude cancelled)
 export async function onRequestGet(context) {
   const { env, request } = context;
   const url = new URL(request.url);
-  const search = url.searchParams.get('search')?.trim();
-
-  // Detect which columns exist so we can handle pre-migration databases
-  let cols = new Set();
-  try {
-    const info = await env.DB.prepare("PRAGMA table_info(attendees)").all();
-    cols = new Set(info.results.map((r) => r.name));
-  } catch {}
-
-  const extra = [];
-  if (cols.has('phone')) extra.push('phone'); else extra.push("NULL as phone");
-  if (cols.has('photo_consent')) extra.push('photo_consent'); else extra.push("1 as photo_consent");
-  if (cols.has('is_waitlist')) extra.push('is_waitlist'); else extra.push("0 as is_waitlist");
-  if (cols.has('cancelled')) extra.push('cancelled'); else extra.push("0 as cancelled");
-  if (cols.has('cancelled_at')) extra.push('cancelled_at'); else extra.push("NULL as cancelled_at");
-  if (cols.has('dietary_needs')) extra.push('dietary_needs'); else extra.push("NULL as dietary_needs");
-  if (cols.has('accessibility_needs')) extra.push('accessibility_needs'); else extra.push("NULL as accessibility_needs");
-
-  const selectCols = `id, ticket_id, first_name, last_name, email, giver_army, giver_army_tenure, checked_in, checked_in_at, created_at, ${extra.join(', ')}`;
+  const q = (v) => url.searchParams.get(v);
+  const search = (q('search') || '').trim();
+  const checkedIn = q('checked_in');
+  const giverArmy = q('giver_army');
+  const tenure = q('tenure');
+  const waitlist = q('waitlist');
+  const cancelled = q('cancelled');
 
   try {
-    let result;
+    const wheres = [];
+    const binds = [];
+
+    if (cancelled === 'yes') wheres.push('cancelled = 1');
+    else wheres.push('cancelled = 0');
+
+    if (waitlist === 'yes') wheres.push('is_waitlist = 1');
+    else if (waitlist === 'no') wheres.push('is_waitlist = 0');
+
+    if (checkedIn === 'yes') wheres.push('checked_in = 1');
+    else if (checkedIn === 'no') wheres.push('checked_in = 0');
+
+    if (giverArmy === 'yes') wheres.push('is_giver_army = 1');
+    else if (giverArmy === 'no') wheres.push('is_giver_army = 0');
+
+    if (tenure) { wheres.push('giver_army_tenure = ?'); binds.push(tenure); }
 
     if (search) {
-      const pattern = `%${search}%`;
-      result = await env.DB.prepare(
-        `SELECT ${selectCols} FROM attendees
-         WHERE first_name LIKE ? OR last_name LIKE ? OR email LIKE ?
-         ORDER BY created_at DESC`
-      ).bind(pattern, pattern, pattern).all();
-    } else {
-      result = await env.DB.prepare(
-        `SELECT ${selectCols} FROM attendees ORDER BY created_at DESC`
-      ).all();
+      wheres.push('(first_name LIKE ? OR last_name LIKE ? OR email LIKE ?)');
+      const pat = `%${search}%`;
+      binds.push(pat, pat, pat);
     }
 
-    return new Response(JSON.stringify({ attendees: result.results }), {
-      headers: { 'Content-Type': 'application/json' },
-    });
+    const sql = `
+      SELECT id, ticket_id, registration_group_id,
+             first_name, last_name, email, phone,
+             is_giver_army, giver_army_tenure, vip_cocktail, media_consent,
+             is_waitlist, waitlist_timestamp,
+             checked_in, checked_in_at,
+             cancelled, cancelled_at,
+             created_at
+      FROM attendees
+      ${wheres.length ? 'WHERE ' + wheres.join(' AND ') : ''}
+      ORDER BY created_at DESC`;
+
+    const result = await env.DB.prepare(sql).bind(...binds).all();
+    return json({ attendees: result.results || [] });
   } catch (err) {
-    console.error('Attendees error:', err);
-    return new Response(JSON.stringify({ error: 'Failed to load attendees', attendees: [] }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    console.error('attendees list error', err);
+    return json({ error: 'Failed to load attendees', attendees: [] }, 500);
   }
+}
+
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
 }

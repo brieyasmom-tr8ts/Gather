@@ -1,17 +1,14 @@
-# Admin password for the dashboard
+# Admin password for the dashboard.
 ADMIN_PASSWORD=your-secure-admin-password
 
-# Secret key for signing auth tokens
+# Secret key for signing auth tokens (generate a random 32+ char string).
 AUTH_SECRET=your-random-secret-key-min-32-chars
 
-# Resend API key for sending emails
+# Resend API key for sending emails.
 RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-# Email sender address (must be verified in Resend)
+# Email sender address (must be verified in Resend).
 EMAIL_FROM=GiveSendGo Gala <gala@yourdomain.com>
 
-# Base URL of the deployed app
+# Base URL of the deployed app (used for QR links, edit links, etc).
 BASE_URL=https://your-app.pages.dev
-
-# Maximum number of attendees (0 = unlimited)
-MAX_ATTENDEES=0
