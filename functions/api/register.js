@@ -102,7 +102,7 @@ export async function onRequestPost(context) {
     }
 
     // Send confirmation emails — non-blocking
-    if (env.RESEND_API_KEY && !isWaitlist) {
+    if (env.BREVO_API_KEY && !isWaitlist) {
       const baseUrl = env.BASE_URL || `https://${request.headers.get('host')}`;
       context.waitUntil(Promise.all(created.map((a) =>
         sendTemplateToAttendee({

@@ -70,7 +70,7 @@ export async function onRequestPost(context) {
     const vars = buildTemplateVars({ attendee: a, event, baseUrl, editToken });
     const rendered = renderEmail(tmpl, vars, event);
     const result = await sendEmail({
-      apiKey: env.RESEND_API_KEY,
+      apiKey: env.BREVO_API_KEY,
       from: env.EMAIL_FROM,
       to: a.email,
       subject: rendered.subject,

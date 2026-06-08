@@ -1,9 +1,9 @@
-// Email sender (Resend) + template rendering with {{variables}}.
+// Email sender (Brevo) + template rendering with {{variables}}.
 // Templates are stored in D1 (email_templates). The admin can edit them at any time.
 
 import { buildPublicEvent } from './event.js';
 
-const DEFAULT_FROM = 'GiveSendGo Gala <onboarding@resend.dev>';
+const DEFAULT_FROM = 'Celebrate Gala 2026 <gala@giverarmy.com>';
 
 export async function loadTemplate(db, slug) {
   return await db.prepare('SELECT slug, name, subject, body, updated_at FROM email_templates WHERE slug = ?')
@@ -166,20 +166,36 @@ export function renderEmail(template, vars, event) {
 }
 
 /**
- * Send one email through Resend.
+ * Send one email through Brevo.
  */
 export async function sendEmail({ apiKey, from, to, subject, html }) {
-  if (!apiKey) return { ok: false, error: 'RESEND_API_KEY not configured' };
-  const res = await fetch('https://api.resend.com/emails', {
+  if (!apiKey) return { ok: false, error: 'BREVO_API_KEY not configured' };
+  const fromParsed = parseFrom(from || DEFAULT_FROM);
+  const toList = (Array.isArray(to) ? to : [to]).map((t) =>
+    typeof t === 'string' ? { email: t } : t
+  );
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
-    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: from || DEFAULT_FROM, reply_to: 'Heather@GiveSendGo.com', to: Array.isArray(to) ? to : [to], subject, html }),
+    headers: { 'api-key': apiKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      sender: fromParsed,
+      replyTo: { email: 'Heather@GiveSendGo.com' },
+      to: toList,
+      subject,
+      htmlContent: html,
+    }),
   });
   if (!res.ok) {
     const text = await res.text().catch(() => '');
-    return { ok: false, error: `Resend error ${res.status}: ${text}` };
+    return { ok: false, error: `Brevo error ${res.status}: ${text}` };
   }
   return { ok: true };
+}
+
+function parseFrom(from) {
+  const match = from.match(/^(.+?)\s*<(.+?)>$/);
+  if (match) return { name: match[1].trim(), email: match[2].trim() };
+  return { email: from };
 }
 
 /**
@@ -196,7 +212,7 @@ export async function sendTemplateToAttendee({ db, env, attendee, slug, baseUrl,
     event
   );
   return await sendEmail({
-    apiKey: env.RESEND_API_KEY,
+    apiKey: env.BREVO_API_KEY,
     from: env.EMAIL_FROM || DEFAULT_FROM,
     to: attendee.email,
     subject: rendered.subject,
