@@ -131,7 +131,7 @@ export default function Home() {
             <DetailCard
               title="Attire"
               line1={event.dress_code || 'Formal / Cocktail'}
-              line2="Dress to celebrate"
+              line2="Dress to celebrate — this is your night to shine."
               icon={<IconBowtie />}
             />
             <DetailCard
