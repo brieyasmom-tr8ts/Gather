@@ -34,8 +34,9 @@ export default function Home() {
               GiveSendGo Giver Gala
             </p>
             <h1 className="text-white font-extrabold tracking-tight text-6xl md:text-8xl lg:text-9xl leading-[0.9]">
-              {event.name}
-              {event.year && <><br /><span className="text-gala-mint">{event.year}</span></>}
+              Celebrate!
+              <br /><span className="text-gala-mint/90">Giver Gala</span>
+              <br /><span className="text-gala-mint">2026</span>
             </h1>
             {event.tagline && (
               <p className="text-white/60 text-lg md:text-xl font-light mt-6 max-w-xl mx-auto">
