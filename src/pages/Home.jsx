@@ -190,13 +190,15 @@ export default function Home() {
 
 function DetailCard({ icon, title, line1, line2, line3, link, linkText }) {
   const content = (
-    <div className="card p-8 text-center h-full">
-      <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gala-deep text-gala-mint mb-5">{icon}</div>
+    <div className="card p-8 text-center h-full flex flex-col">
+      <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gala-deep text-gala-mint mb-5 mx-auto">{icon}</div>
       <h3 className="text-lg font-bold text-gala-dark mb-2">{title}</h3>
-      <p className="text-gray-800 font-medium">{line1}</p>
-      {line2 && <p className="text-gray-500 text-sm mt-1">{line2}</p>}
-      {line3 && <p className="text-gray-400 text-xs mt-1">{line3}</p>}
-      {link && <p className="text-gala-deep font-semibold text-sm mt-3 hover:underline" dangerouslySetInnerHTML={{ __html: linkText || 'Learn more &rarr;' }} />}
+      <div className="flex-1">
+        <p className="text-gray-800 font-medium">{line1}</p>
+        {line2 && <p className="text-gray-500 text-sm mt-1">{line2}</p>}
+        {line3 && <p className="text-gray-400 text-xs mt-1">{line3}</p>}
+      </div>
+      {link && <p className="text-gala-deep font-semibold text-sm mt-4 hover:underline" dangerouslySetInnerHTML={{ __html: linkText || 'Learn more &rarr;' }} />}
     </div>
   );
   if (link) return <a href={link} target="_blank" rel="noreferrer">{content}</a>;
