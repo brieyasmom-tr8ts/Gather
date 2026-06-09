@@ -125,7 +125,7 @@ export default function Home() {
             <DetailCard
               title="What Is This?"
               line1="This is not a fundraiser."
-              line2="It is a Celebration."
+              line2="It is a Celebration — a time to recognize the power of generosity and how it can change the world."
               icon={<IconHeart />}
             />
             <DetailCard
