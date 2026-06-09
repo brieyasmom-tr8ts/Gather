@@ -107,7 +107,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Details */}
+      {/* Event Details */}
       <section id="details" className="py-20 md:py-24 px-6 bg-gray-50">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-14">
@@ -123,57 +123,29 @@ export default function Home() {
 
           <div className="grid md:grid-cols-3 gap-5">
             <DetailCard
-              title="Date &amp; Time"
+              title="When"
               line1={event.long_date}
-              line2={event.time_range}
+              line2={`Gala ${event.time_range}`}
+              line3="VIP Cocktail Hour 6:00 PM"
               icon={<IconCalendar />}
             />
             <DetailCard
-              title="Venue"
-              line1={event.venue_name}
-              line2={[event.venue_city, event.venue_state].filter(Boolean).join(', ')}
-              icon={<IconPin />}
+              title="Schedule"
+              line1={event.dress_code || 'Cocktail Attire'}
+              line2={event.arrival_info}
+              line3={event.parking_info}
+              icon={<IconClipboard />}
             />
             <DetailCard
-              title="Dress Code"
-              line1={event.dress_code || 'Cocktail Attire'}
-              line2="Dress to celebrate"
-              icon={<IconBowtie />}
+              title="Where"
+              line1={event.venue_name}
+              line2={[event.venue_address, event.venue_city, event.venue_state].filter(Boolean).join(', ')}
+              icon={<IconPin />}
+              link={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([event.venue_name, event.venue_address, event.venue_city, event.venue_state].filter(Boolean).join(', '))}`}
             />
           </div>
         </div>
       </section>
-
-      {/* Plan Your Arrival */}
-      {(event.parking_info || event.arrival_info) && (
-        <section className="py-20 px-6 bg-white">
-          <div className="max-w-3xl mx-auto">
-            <h2 className="text-center text-3xl md:text-4xl font-extrabold text-gala-dark mb-12">
-              Plan Your Arrival
-            </h2>
-            <div className="grid md:grid-cols-2 gap-5">
-              {event.arrival_info && (
-                <ArrivalCard title="Arrival" body={event.arrival_info} />
-              )}
-              {event.parking_info && (
-                <ArrivalCard title="Parking" body={event.parking_info} />
-              )}
-            </div>
-            {venueLine && (
-              <div className="mt-6 text-center">
-                <a
-                  className="text-gala-deep font-semibold hover:underline text-sm"
-                  target="_blank"
-                  rel="noreferrer"
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([event.venue_name, event.venue_address, event.venue_city, event.venue_state].filter(Boolean).join(', '))}`}
-                >
-                  Open in Google Maps →
-                </a>
-              </div>
-            )}
-          </div>
-        </section>
-      )}
 
       {/* FAQ */}
       {event.faq?.length > 0 && (
@@ -215,15 +187,19 @@ export default function Home() {
   );
 }
 
-function DetailCard({ icon, title, line1, line2 }) {
-  return (
-    <div className="card p-8 text-center">
+function DetailCard({ icon, title, line1, line2, line3, link }) {
+  const content = (
+    <div className="card p-8 text-center h-full">
       <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gala-deep text-gala-mint mb-5">{icon}</div>
       <h3 className="text-lg font-bold text-gala-dark mb-2">{title}</h3>
       <p className="text-gray-800 font-medium">{line1}</p>
       {line2 && <p className="text-gray-500 text-sm mt-1">{line2}</p>}
+      {line3 && <p className="text-gray-400 text-xs mt-1">{line3}</p>}
+      {link && <p className="text-gala-deep font-semibold text-xs mt-3 hover:underline">Open in Google Maps &rarr;</p>}
     </div>
   );
+  if (link) return <a href={link} target="_blank" rel="noreferrer">{content}</a>;
+  return content;
 }
 
 function ArrivalCard({ title, body }) {
@@ -250,10 +226,10 @@ function IconPin() {
     </svg>
   );
 }
-function IconBowtie() {
+function IconClipboard() {
   return (
     <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 6l6 6-6 6V6zm18 0l-6 6 6 6V6zM9 9h6v6H9V9z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
     </svg>
   );
 }
