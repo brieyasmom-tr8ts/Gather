@@ -123,18 +123,16 @@ export default function Home() {
 
           <div className="grid md:grid-cols-3 gap-5">
             <DetailCard
-              title="When"
-              line1={event.long_date}
-              line2={`Gala ${event.time_range}`}
-              line3="VIP Cocktail Hour 6:00 PM"
-              icon={<IconCalendar />}
+              title="What Is This?"
+              line1="This is not a fundraiser."
+              line2="It is a Celebration."
+              icon={<IconHeart />}
             />
             <DetailCard
-              title="Schedule"
-              line1={event.dress_code || 'Cocktail Attire'}
-              line2={event.arrival_info}
-              line3={event.parking_info}
-              icon={<IconClipboard />}
+              title="Attire"
+              line1={event.dress_code || 'Formal / Cocktail'}
+              line2="Dress to celebrate"
+              icon={<IconBowtie />}
             />
             <DetailCard
               title="Where"
@@ -226,10 +224,18 @@ function IconPin() {
     </svg>
   );
 }
-function IconClipboard() {
+function IconHeart() {
   return (
     <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+    </svg>
+  );
+}
+
+function IconBowtie() {
+  return (
+    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 6l6 6-6 6V6zm18 0l-6 6 6 6V6zM9 9h6v6H9V9z" />
     </svg>
   );
 }
