@@ -123,18 +123,18 @@ export default function Home() {
 
           <div className="grid md:grid-cols-3 gap-5">
             <DetailCard
-              title="What Is This?"
-              line1="This is not a fundraiser."
-              line2="It is a Celebration — a time to recognize the power of generosity and how it can change the world."
-              icon={<IconHeart />}
-            />
-            <DetailCard
               title="Book Your Stay"
               line1="DoubleTree by Hilton Orlando"
               line2="Exclusive group rate available for gala guests. Reserve your room today!"
               icon={<IconBed />}
               link="https://book.passkey.com/event/51263692/owner/213/home"
               linkText="Reserve Your Room &rarr;"
+            />
+            <DetailCard
+              title="What Is This?"
+              line1="This is not a fundraiser."
+              line2="It is a Celebration — a time to recognize the power of generosity and how it can change the world."
+              icon={<IconHeart />}
             />
             <DetailCard
               title="Become a VIP"
