@@ -4,6 +4,30 @@ export default function AttendeeForm({ index, attendee, onChange, onRemove, erro
   const handle = (field, value) => onChange(index, { ...attendee, [field]: value });
   const label = isPrimary ? 'You' : 'Your guest';
 
+  const handleEmailBlur = async () => {
+    const email = attendee.email.trim().toLowerCase();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
+    if (attendee._verifiedEmail === email) return;
+    try {
+      const res = await fetch(`/api/giver-army/verify?email=${encodeURIComponent(email)}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const isValidTenure = GIVER_ARMY_TENURE_OPTIONS.some((o) => o.value === data.tenure);
+      onChange(index, {
+        ...attendee,
+        ...(data.active ? {
+          giverArmy: true,
+          giverArmyTenure: isValidTenure ? data.tenure : attendee.giverArmyTenure,
+        } : {}),
+        giverArmyVerified: !!data.active,
+        giverArmyVerifiedTenure: data.tenure || '',
+        _verifiedEmail: email,
+      });
+    } catch {
+      // Non-blocking — verification failure shouldn't interrupt registration.
+    }
+  };
+
   return (
     <div className="card p-6 md:p-7 animate-scale-in">
       <div className="flex items-center justify-between mb-5">
@@ -51,6 +75,7 @@ export default function AttendeeForm({ index, attendee, onChange, onRemove, erro
           id={`email-${index}`} label="Email" type="email"
           value={attendee.email}
           onChange={(v) => handle('email', v)}
+          onBlur={handleEmailBlur}
           error={errors?.email}
           autoComplete="email"
         />
@@ -142,7 +167,7 @@ export default function AttendeeForm({ index, attendee, onChange, onRemove, erro
   );
 }
 
-function Field({ id, label, type = 'text', value, onChange, error, autoComplete, placeholder }) {
+function Field({ id, label, type = 'text', value, onChange, onBlur, error, autoComplete, placeholder }) {
   return (
     <div>
       <label className="label" htmlFor={id}>{label}</label>
@@ -151,6 +176,7 @@ function Field({ id, label, type = 'text', value, onChange, error, autoComplete,
         type={type}
         value={value || ''}
         onChange={(e) => onChange(e.target.value)}
+        onBlur={onBlur}
         className={`input-field ${error ? 'border-red-400 focus:border-red-400 focus:ring-red-100' : ''}`}
         autoComplete={autoComplete}
         placeholder={placeholder}

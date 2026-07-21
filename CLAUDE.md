@@ -27,7 +27,7 @@ npm run dev            # wrangler pages dev + vite (localhost:8788)
 
 ## Environment variables
 Secrets go in `.dev.vars` locally (see `.dev.vars.example`):
-`ADMIN_PASSWORD`, `AUTH_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM`, `BASE_URL`
+`ADMIN_PASSWORD`, `AUTH_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM`, `BASE_URL`, `GIVER_ARMY_API_URL`, `GIVER_ARMY_API_KEY`
 
 ## Deploy
 ```bash

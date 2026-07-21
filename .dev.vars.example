@@ -12,3 +12,8 @@ EMAIL_FROM=GiveSendGo Gala <gala@yourdomain.com>
 
 # Base URL of the deployed app (used for QR links, edit links, etc).
 BASE_URL=https://your-app.pages.dev
+
+# GiveSendGo Giver Army membership verification API (Laravel).
+# Base URL only — the path /api/giver-army/verify is appended by the proxy function.
+GIVER_ARMY_API_URL=https://your-laravel-app.example.com
+GIVER_ARMY_API_KEY=your-bearer-token

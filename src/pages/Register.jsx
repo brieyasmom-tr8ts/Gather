@@ -15,6 +15,9 @@ const emptyAttendee = () => ({
   giverArmyTenure: '',
   vipCocktail: false,
   mediaConsent: false,
+  giverArmyVerified: null,
+  giverArmyVerifiedTenure: '',
+  _verifiedEmail: '',
 });
 
 export default function Register() {
