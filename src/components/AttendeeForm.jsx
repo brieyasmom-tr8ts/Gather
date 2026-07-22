@@ -1,24 +1,27 @@
+import { useEffect, useRef } from 'react';
 import { GIVER_ARMY_TENURE_OPTIONS } from '../config';
 
 export default function AttendeeForm({ index, attendee, onChange, onRemove, errors, isPrimary, event }) {
   const handle = (field, value) => onChange(index, { ...attendee, [field]: value });
   const label = isPrimary ? 'You' : 'Your guest';
+  const debounceRef = useRef(null);
+  const onChangeRef = useRef(onChange);
+  const attendeeRef = useRef(attendee);
+  onChangeRef.current = onChange;
+  attendeeRef.current = attendee;
 
-  const handleEmailBlur = async () => {
-    const email = attendee.email.trim().toLowerCase();
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
-    if (attendee._verifiedEmail === email) return;
-    onChange(index, { ...attendee, _verifyingArmy: true, _armyChecked: false });
+  const verifyEmail = async (email, currentAttendee) => {
+    onChangeRef.current(index, { ...currentAttendee, _verifyingArmy: true, _armyChecked: false });
     try {
       const res = await fetch(`/api/giver-army/verify?email=${encodeURIComponent(email)}`);
       if (!res.ok) {
-        onChange(index, { ...attendee, _verifyingArmy: false, _armyChecked: true, _verifiedEmail: email, giverArmy: false, giverArmyVerified: false });
+        onChangeRef.current(index, { ...attendeeRef.current, _verifyingArmy: false, _armyChecked: true, _verifiedEmail: email, giverArmy: false, giverArmyVerified: false });
         return;
       }
       const data = await res.json();
       const isValidTenure = GIVER_ARMY_TENURE_OPTIONS.some((o) => o.value === data.tenure);
-      onChange(index, {
-        ...attendee,
+      onChangeRef.current(index, {
+        ...attendeeRef.current,
         giverArmy: !!data.active,
         giverArmyTenure: data.active && isValidTenure ? data.tenure : '',
         giverArmyVerified: !!data.active,
@@ -28,9 +31,19 @@ export default function AttendeeForm({ index, attendee, onChange, onRemove, erro
         _armyChecked: true,
       });
     } catch {
-      onChange(index, { ...attendee, _verifyingArmy: false, _armyChecked: true, _verifiedEmail: email, giverArmy: false, giverArmyVerified: false });
+      onChangeRef.current(index, { ...attendeeRef.current, _verifyingArmy: false, _armyChecked: true, _verifiedEmail: email, giverArmy: false, giverArmyVerified: false });
     }
   };
+
+  // Auto-verify when email looks valid, debounced 600ms
+  useEffect(() => {
+    const email = (attendee.email || '').trim().toLowerCase();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
+    if (attendee._verifiedEmail === email) return;
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => verifyEmail(email, attendee), 600);
+    return () => clearTimeout(debounceRef.current);
+  }, [attendee.email]);
 
   return (
     <div className="card p-6 md:p-7 animate-scale-in">
@@ -79,7 +92,6 @@ export default function AttendeeForm({ index, attendee, onChange, onRemove, erro
           id={`email-${index}`} label="Email" type="email"
           value={attendee.email}
           onChange={(v) => handle('email', v)}
-          onBlur={handleEmailBlur}
           error={errors?.email}
           autoComplete="email"
         />
