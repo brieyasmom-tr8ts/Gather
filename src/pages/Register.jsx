@@ -11,13 +11,16 @@ const emptyAttendee = () => ({
   lastName: '',
   email: '',
   phone: '',
-  giverArmy: null,
+  giverArmy: false,
   giverArmyTenure: '',
   vipCocktail: false,
   mediaConsent: false,
-  giverArmyVerified: null,
-  giverArmyVerifiedTenure: '',
+  giverArmyVerified: false,
+  giverArmyMemberSince: '',
   _verifiedEmail: '',
+  _verifyingArmy: false,
+  _armyChecked: false,
+  _reviewRequested: false,
 });
 
 export default function Register() {
@@ -127,6 +130,7 @@ export default function Register() {
             giverArmy: a.giverArmy || false,
             giverArmyTenure: a.giverArmy ? a.giverArmyTenure || null : null,
             vipCocktail: a.giverArmy ? !!a.vipCocktail : false,
+            reviewRequested: !!a._reviewRequested,
             mediaConsent: !!a.mediaConsent,
           })),
         }),
@@ -352,6 +356,11 @@ function ReviewStage({ attendees, event, isWaitlist, submitting, serverError, on
                 {a.vipCocktail && (
                   <span className="px-2 py-1 rounded-full bg-gala-deep/10 text-gala-deep font-semibold">
                     VIP Cocktail Hour
+                  </span>
+                )}
+                {a._reviewRequested && (
+                  <span className="px-2 py-1 rounded-full bg-amber-100 text-amber-800 font-semibold">
+                    Membership review requested
                   </span>
                 )}
                 {a.phone && <span className="text-gray-400">{a.phone}</span>}

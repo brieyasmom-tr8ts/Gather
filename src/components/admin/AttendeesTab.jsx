@@ -189,6 +189,10 @@ export default function AttendeesTab({ showToast, onDataChange }) {
                           </span>
                         ) : null}
                       </div>
+                    ) : a.giver_army_review_requested ? (
+                      <span className="inline-flex items-center text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+                        Review Requested
+                      </span>
                     ) : (<span className="text-xs text-gray-300">—</span>)}
                   </td>
                   <td className="px-4 py-3 text-center">

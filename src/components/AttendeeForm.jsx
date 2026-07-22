@@ -8,23 +8,27 @@ export default function AttendeeForm({ index, attendee, onChange, onRemove, erro
     const email = attendee.email.trim().toLowerCase();
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
     if (attendee._verifiedEmail === email) return;
+    onChange(index, { ...attendee, _verifyingArmy: true, _armyChecked: false });
     try {
       const res = await fetch(`/api/giver-army/verify?email=${encodeURIComponent(email)}`);
-      if (!res.ok) return;
+      if (!res.ok) {
+        onChange(index, { ...attendee, _verifyingArmy: false, _armyChecked: true, _verifiedEmail: email, giverArmy: false, giverArmyVerified: false });
+        return;
+      }
       const data = await res.json();
       const isValidTenure = GIVER_ARMY_TENURE_OPTIONS.some((o) => o.value === data.tenure);
       onChange(index, {
         ...attendee,
-        ...(data.active ? {
-          giverArmy: true,
-          giverArmyTenure: isValidTenure ? data.tenure : attendee.giverArmyTenure,
-        } : {}),
+        giverArmy: !!data.active,
+        giverArmyTenure: data.active && isValidTenure ? data.tenure : '',
         giverArmyVerified: !!data.active,
-        giverArmyVerifiedTenure: data.tenure || '',
+        giverArmyMemberSince: data.memberSince || '',
         _verifiedEmail: email,
+        _verifyingArmy: false,
+        _armyChecked: true,
       });
     } catch {
-      // Non-blocking — verification failure shouldn't interrupt registration.
+      onChange(index, { ...attendee, _verifyingArmy: false, _armyChecked: true, _verifiedEmail: email, giverArmy: false, giverArmyVerified: false });
     }
   };
 
@@ -89,19 +93,42 @@ export default function AttendeeForm({ index, attendee, onChange, onRemove, erro
         />
       </div>
 
-      {/* Giver Army */}
+      {/* Giver Army — auto-verified via API on email blur */}
       <div className="mt-6">
-        <label className="label">Are you part of the Giver Army?</label>
-        <div className="flex gap-3">
-          <TogglePill active={attendee.giverArmy === true} onClick={() => handle('giverArmy', true)}>Yes</TogglePill>
-          <TogglePill active={attendee.giverArmy === false} onClick={() => onChange(index, { ...attendee, giverArmy: false, giverArmyTenure: '' })}>No</TogglePill>
-        </div>
+        <label className="label">Giver Army Status</label>
 
-        {attendee.giverArmy === true && (
-          <div className="mt-4 animate-fade-in">
-            <div className="p-4 bg-gala-mint/10 border border-gala-mint/40 rounded-xl mb-4">
+        {/* Loading state */}
+        {attendee._verifyingArmy && (
+          <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl animate-pulse">
+            <svg className="w-5 h-5 text-gala-deep animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+            </svg>
+            <span className="text-sm text-gray-600">Checking Giver Army membership...</span>
+          </div>
+        )}
+
+        {/* Not yet checked — prompt to enter email */}
+        {!attendee._verifyingArmy && !attendee._armyChecked && (
+          <p className="text-sm text-gray-500 italic">Enter your email above to check your Giver Army membership.</p>
+        )}
+
+        {/* Verified member */}
+        {!attendee._verifyingArmy && attendee._armyChecked && attendee.giverArmyVerified && (
+          <div className="animate-fade-in">
+            <div className="p-4 bg-gala-mint/15 border border-gala-mint/40 rounded-xl">
+              <div className="flex items-center gap-3 mb-1">
+                <span className="text-2xl">🎖️</span>
+                <h4 className="text-gala-dark font-bold text-sm">You're part of the Giver Army!</h4>
+              </div>
+              {attendee.giverArmyMemberSince && (
+                <p className="text-sm text-gray-600 ml-10">Member since {attendee.giverArmyMemberSince}</p>
+              )}
+            </div>
+
+            <div className="mt-4 p-4 bg-gala-mint/10 border border-gala-mint/40 rounded-xl">
               <p className="text-sm font-semibold text-gala-dark mb-2">
-                🎉 You're invited to the VIP Cocktail Hour!
+                🥂 You're invited to the VIP Cocktail Hour!
               </p>
               <p className="text-xs text-gray-600 mb-3">
                 As a Giver Army member, you have exclusive access to a VIP cocktail hour from 6:00 – 6:45 PM before the main event begins.
@@ -118,28 +145,63 @@ export default function AttendeeForm({ index, attendee, onChange, onRemove, erro
                 </span>
               </label>
             </div>
-            <label className="label">How long have you been part of the Giver Army journey?</label>
-            <div className="flex flex-wrap gap-2">
-              {GIVER_ARMY_TENURE_OPTIONS.map((o) => (
-                <button
-                  key={o.value}
-                  type="button"
-                  onClick={() => handle('giverArmyTenure', o.value)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition ${
-                    attendee.giverArmyTenure === o.value
-                      ? 'bg-gala-deep text-white shadow'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  {o.label}
-                </button>
-              ))}
-            </div>
           </div>
         )}
 
-        {attendee.giverArmy === false && (
-          <GiverArmyCTA event={event} />
+        {/* Not a member */}
+        {!attendee._verifyingArmy && attendee._armyChecked && !attendee.giverArmyVerified && (
+          <div className="animate-fade-in">
+            <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl">
+              <p className="text-sm text-gray-700 font-medium mb-3">
+                We didn't find a Giver Army membership for this email.
+              </p>
+
+              {!attendee._reviewRequested ? (
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <a
+                    href={event?.giver_army_signup_url || 'https://www.giverarmy.com'}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center justify-center gap-2 bg-gala-deep text-white font-semibold px-5 py-2.5 rounded-full text-sm hover:bg-gala-dark transition"
+                  >
+                    Sign Up Now
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => handle('_reviewRequested', true)}
+                    className="inline-flex items-center justify-center gap-2 bg-white border border-gray-300 text-gray-700 font-medium px-5 py-2.5 rounded-full text-sm hover:bg-gray-100 transition"
+                  >
+                    I think I'm a member — request a review
+                  </button>
+                </div>
+              ) : (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <p className="text-sm text-amber-800 font-medium">
+                    ✅ Review requested — our team will verify your membership and follow up.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {!attendee._reviewRequested && event?.giver_army_video_url && (
+              <div className="mt-4">
+                <p className="text-sm text-gray-600 mb-2">Learn about the Giver Army:</p>
+                <div className="aspect-video rounded-xl overflow-hidden bg-black/90">
+                  <iframe
+                    src={event.giver_army_video_url}
+                    title="Giver Army"
+                    className="w-full h-full"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+              </div>
+            )}
+          </div>
         )}
       </div>
 
@@ -186,53 +248,3 @@ function Field({ id, label, type = 'text', value, onChange, onBlur, error, autoC
   );
 }
 
-function TogglePill({ active, onClick, children }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold transition ${
-        active ? 'bg-gala-deep text-white shadow shadow-gala-deep/25' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
-function GiverArmyCTA({ event }) {
-  if (!event?.giver_army_video_url && !event?.giver_army_signup_url) return null;
-  return (
-    <div className="mt-5 p-5 bg-gala-mint/10 border border-gala-mint/40 rounded-2xl animate-fade-in">
-      <h4 className="font-bold text-gala-dark mb-1">Want to be part of the Giver Army?</h4>
-      <p className="text-sm text-gray-600 mb-4">
-        The Giver Army is a community of passionate people who believe in the power of generosity. Learn more below.
-      </p>
-      {event.giver_army_video_url && (
-        <div className="aspect-video mb-4 rounded-xl overflow-hidden bg-black/90">
-          <iframe
-            src={event.giver_army_video_url}
-            title="Giver Army"
-            className="w-full h-full"
-            frameBorder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
-        </div>
-      )}
-      {event.giver_army_signup_url && (
-        <a
-          href={event.giver_army_signup_url}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-2 bg-gala-deep text-white font-semibold px-5 py-2.5 rounded-full text-sm hover:bg-gala-dark transition"
-        >
-          Join Now
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-          </svg>
-        </a>
-      )}
-    </div>
-  );
-}

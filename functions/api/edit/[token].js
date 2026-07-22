@@ -12,7 +12,7 @@ export async function onRequestGet(context) {
 
   const attendees = await env.DB.prepare(
     `SELECT ticket_id, first_name, last_name, email, phone,
-            is_giver_army, giver_army_tenure, media_consent
+            is_giver_army, giver_army_tenure, giver_army_review_requested, media_consent
      FROM attendees WHERE registration_group_id = ? AND cancelled = 0 ORDER BY id ASC`
   ).bind(reg.group_id).all();
 
@@ -86,13 +86,14 @@ export async function onRequestPost(context) {
       keepTickets.add(a.ticketId);
       await env.DB.prepare(
         `UPDATE attendees SET first_name=?, last_name=?, email=?, phone=?,
-           is_giver_army=?, giver_army_tenure=?, vip_cocktail=?, updated_at=datetime('now')
+           is_giver_army=?, giver_army_tenure=?, giver_army_review_requested=?, vip_cocktail=?, updated_at=datetime('now')
          WHERE ticket_id=?`
       ).bind(
         a.firstName.trim(), a.lastName.trim(), a.email.trim().toLowerCase(),
         (a.phone || '').trim() || null,
         a.giverArmy ? 1 : 0,
         a.giverArmy && a.giverArmyTenure ? a.giverArmyTenure : null,
+        a.reviewRequested ? 1 : 0,
         (a.giverArmy && a.vipCocktail) ? 1 : 0,
         a.ticketId
       ).run();
@@ -102,15 +103,16 @@ export async function onRequestPost(context) {
         `INSERT INTO attendees (
            ticket_id, registration_group_id,
            first_name, last_name, email, phone,
-           is_giver_army, giver_army_tenure, vip_cocktail, media_consent,
+           is_giver_army, giver_army_tenure, giver_army_review_requested, vip_cocktail, media_consent,
            is_waitlist
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).bind(
         ticketId, reg.group_id,
         a.firstName.trim(), a.lastName.trim(), a.email.trim().toLowerCase(),
         (a.phone || '').trim() || null,
         a.giverArmy ? 1 : 0,
         a.giverArmy && a.giverArmyTenure ? a.giverArmyTenure : null,
+        a.reviewRequested ? 1 : 0,
         (a.giverArmy && a.vipCocktail) ? 1 : 0,
         a.mediaConsent ? 1 : 0,
         reg.is_waitlist ? 1 : 0

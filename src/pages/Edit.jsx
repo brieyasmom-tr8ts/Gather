@@ -7,7 +7,9 @@ import { GIVER_ARMY_TENURE_OPTIONS } from '../config';
 const emptyAttendee = () => ({
   ticketId: null,
   firstName: '', lastName: '', email: '', phone: '',
-  giverArmy: null, giverArmyTenure: '', mediaConsent: true,
+  giverArmy: false, giverArmyTenure: '', mediaConsent: true,
+  giverArmyVerified: false, giverArmyMemberSince: '',
+  _verifiedEmail: '', _verifyingArmy: false, _armyChecked: false, _reviewRequested: false,
 });
 
 // Map a server attendee shape to a form shape.
@@ -20,7 +22,13 @@ function toFormShape(a) {
     phone: a.phone || '',
     giverArmy: !!a.is_giver_army,
     giverArmyTenure: a.giver_army_tenure || '',
+    giverArmyVerified: !!a.is_giver_army,
+    giverArmyMemberSince: '',
     mediaConsent: !!a.media_consent || true,
+    _verifiedEmail: a.email || '',
+    _verifyingArmy: false,
+    _armyChecked: true,
+    _reviewRequested: !!a.giver_army_review_requested,
   };
 }
 
@@ -83,6 +91,7 @@ export default function Edit() {
             phone: (a.phone || '').trim(),
             giverArmy: !!a.giverArmy,
             giverArmyTenure: a.giverArmy ? a.giverArmyTenure || null : null,
+            reviewRequested: !!a._reviewRequested,
             mediaConsent: true,
           })),
         }),
