@@ -13,6 +13,20 @@ export async function onRequestPost(context) {
     const honeypot = body.website;
 
     if (honeypot) return json({ error: 'Invalid request' }, 400);
+
+    // Turnstile CAPTCHA verification
+    if (env.TURNSTILE_SECRET_KEY) {
+      const token = body.turnstileToken;
+      if (!token) return json({ error: 'Please complete the CAPTCHA.' }, 400);
+      const tsRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ secret: env.TURNSTILE_SECRET_KEY, response: token }),
+      });
+      const tsData = await tsRes.json();
+      if (!tsData.success) return json({ error: 'CAPTCHA verification failed. Please try again.' }, 400);
+    }
+
     if (attendees.length === 0 || attendees.length > 2) {
       return json({ error: 'Please provide 1 or 2 attendees.' }, 400);
     }

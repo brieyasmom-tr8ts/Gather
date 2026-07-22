@@ -155,6 +155,10 @@ export default function Register() {
       setServerError('Something went wrong. Please check your connection and try again.');
     } finally {
       setSubmitting(false);
+      setTurnstileToken(null);
+      if (widgetIdRef.current && window.turnstile) {
+        try { window.turnstile.reset(widgetIdRef.current); } catch {}
+      }
     }
   };
 

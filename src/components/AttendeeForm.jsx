@@ -7,18 +7,22 @@ export default function AttendeeForm({ index, attendee, onChange, onRemove, erro
   const debounceRef = useRef(null);
   const onChangeRef = useRef(onChange);
   const attendeeRef = useRef(attendee);
+  const verifyIdRef = useRef(0);
   onChangeRef.current = onChange;
   attendeeRef.current = attendee;
 
-  const verifyEmail = async (email, currentAttendee) => {
-    onChangeRef.current(index, { ...currentAttendee, _verifyingArmy: true, _armyChecked: false });
+  const verifyEmail = async (email) => {
+    const id = ++verifyIdRef.current;
+    onChangeRef.current(index, { ...attendeeRef.current, _verifyingArmy: true, _armyChecked: false });
     try {
       const res = await fetch(`/api/giver-army/verify?email=${encodeURIComponent(email)}`);
+      if (verifyIdRef.current !== id) return; // stale response — discard
       if (!res.ok) {
         onChangeRef.current(index, { ...attendeeRef.current, _verifyingArmy: false, _armyChecked: true, _verifiedEmail: email, giverArmy: false, giverArmyVerified: false });
         return;
       }
       const data = await res.json();
+      if (verifyIdRef.current !== id) return; // stale response — discard
       const isValidTenure = GIVER_ARMY_TENURE_OPTIONS.some((o) => o.value === data.tenure);
       onChangeRef.current(index, {
         ...attendeeRef.current,
@@ -31,9 +35,18 @@ export default function AttendeeForm({ index, attendee, onChange, onRemove, erro
         _armyChecked: true,
       });
     } catch {
+      if (verifyIdRef.current !== id) return;
       onChangeRef.current(index, { ...attendeeRef.current, _verifyingArmy: false, _armyChecked: true, _verifiedEmail: email, giverArmy: false, giverArmyVerified: false });
     }
   };
+
+  // Clear verification when email changes away from verified email
+  useEffect(() => {
+    const email = (attendee.email || '').trim().toLowerCase();
+    if (attendee._verifiedEmail && email !== attendee._verifiedEmail && attendee._armyChecked) {
+      onChange(index, { ...attendee, _armyChecked: false, _verifiedEmail: '', giverArmyVerified: false, giverArmy: false, giverArmyMemberSince: '', _reviewRequested: false });
+    }
+  }, [attendee.email]);
 
   // Auto-verify when email looks valid, debounced 600ms
   useEffect(() => {
@@ -41,7 +54,7 @@ export default function AttendeeForm({ index, attendee, onChange, onRemove, erro
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
     if (attendee._verifiedEmail === email) return;
     clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => verifyEmail(email, attendee), 600);
+    debounceRef.current = setTimeout(() => verifyEmail(email), 600);
     return () => clearTimeout(debounceRef.current);
   }, [attendee.email]);
 
