@@ -96,6 +96,9 @@ export default function Register() {
       if (!a.email.trim()) f.email = 'Email is required';
       else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a.email)) f.email = 'Please enter a valid email';
       else if (emails.has(a.email.toLowerCase())) f.email = 'This email is already used above';
+      if (a.phone && a.phone.trim() && !/^[+\d\s().-]{7,20}$/.test(a.phone.trim())) {
+        f.phone = 'Please enter a valid phone number';
+      }
       if (!a.mediaConsent) f.mediaConsent = 'Please acknowledge the consent to continue';
       if (a.email) emails.add(a.email.toLowerCase());
       if (Object.keys(f).length) next[i] = f;

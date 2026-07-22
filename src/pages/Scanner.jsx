@@ -6,6 +6,7 @@ export default function Scanner() {
   const [mode, setMode] = useState('qr'); // 'qr' | 'manual'
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
+  const [cameraReady, setCameraReady] = useState(false);
   const [query, setQuery] = useState('');
   const [matches, setMatches] = useState([]);
   const [stats, setStats] = useState(null);
@@ -29,6 +30,7 @@ export default function Scanner() {
   useEffect(() => {
     if (mode !== 'qr') return;
     let scanner = null;
+    setCameraReady(false);
 
     (async () => {
       try {
@@ -41,6 +43,7 @@ export default function Scanner() {
           handleScan,
           () => {}
         );
+        setCameraReady(true);
       } catch {
         setError('Camera access denied. Switch to manual check-in or reload the page.');
       }
@@ -141,6 +144,17 @@ export default function Scanner() {
             ) : (
               <>
                 <div id="qr-reader" className="w-full max-w-lg mx-auto" />
+                {!cameraReady && !error && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="text-center">
+                      <svg className="w-8 h-8 text-gala-mint animate-spin mx-auto mb-3" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                      </svg>
+                      <p className="text-white/60 text-sm">Loading camera...</p>
+                    </div>
+                  </div>
+                )}
                 <p className="absolute bottom-6 left-0 right-0 text-center text-white/60 text-sm">
                   Point camera at the ticket QR code
                 </p>

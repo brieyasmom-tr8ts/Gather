@@ -33,6 +33,15 @@ export default function Admin() {
 
   useEffect(() => { loadStats(); }, [loadStats]);
 
+  // Auto-refresh stats every 30 seconds
+  useEffect(() => {
+    const id = setInterval(loadStats, 30000);
+    return () => clearInterval(id);
+  }, [loadStats]);
+
+  // Refresh stats when switching tabs
+  useEffect(() => { loadStats(); }, [tab]);
+
   // Sync tab with URL hash
   useEffect(() => {
     window.location.hash = tab;
