@@ -1,6 +1,6 @@
 // Public registration endpoint — creates a group + attendees, with waitlist fallback.
 import { buildPublicEvent, countConfirmedAttendees } from '../lib/event.js';
-import { sendTemplateToAttendee } from '../lib/email.js';
+import { sendTemplateToAttendee, sendEmail } from '../lib/email.js';
 
 const VALID_TENURES = ['new', '1year', '2-3years', '4-5years', '5plus'];
 
@@ -110,6 +110,27 @@ export async function onRequestPost(context) {
           db: env.DB, env, attendee: a, slug: 'confirmation', baseUrl, editToken,
         }).catch(() => {})
       )));
+    }
+
+    // Notify info@givesendgo.org about Giver Army review requests
+    const reviewRequests = attendees.filter((a) => a.reviewRequested);
+    if (env.BREVO_API_KEY && reviewRequests.length > 0) {
+      const lines = reviewRequests.map((a) =>
+        `- ${a.firstName} ${a.lastName} (${a.email.trim().toLowerCase()})`
+      ).join('\n');
+      context.waitUntil(
+        sendEmail({
+          apiKey: env.BREVO_API_KEY,
+          from: env.EMAIL_FROM || undefined,
+          to: 'info@givesendgo.org',
+          subject: 'Giver Army Membership Review Requested',
+          html: `<p>The following registrant(s) believe they are Giver Army members but could not be verified automatically:</p><ul>${
+            reviewRequests.map((a) =>
+              `<li><strong>${a.firstName} ${a.lastName}</strong> &mdash; ${a.email.trim().toLowerCase()}</li>`
+            ).join('')
+          }</ul><p>Please verify their membership and update their registration in the <a href="${env.BASE_URL || `https://${request.headers.get('host')}`}/admin">admin dashboard</a>.</p>`,
+        }).catch(() => {})
+      );
     }
 
     return json({
