@@ -57,11 +57,17 @@ export default function Home() {
               <p className="text-white/60 text-sm mt-1">VIP Cocktail Hour 6:00 PM</p>
               <p className="text-white/40 text-xs">Giver Army members</p>
             </div>
-            <div className="bg-white/[0.07] backdrop-blur-sm rounded-2xl px-6 py-5 text-center border border-white/10">
+            <a
+              href="https://book.passkey.com/event/51263692/owner/213/home"
+              target="_blank"
+              rel="noreferrer"
+              className="bg-white/[0.07] backdrop-blur-sm rounded-2xl px-6 py-5 text-center border border-white/10 hover:bg-white/[0.13] transition-colors block"
+            >
               <p className="text-gala-mint text-[10px] font-bold uppercase tracking-[0.2em] mb-1">Where</p>
               <p className="text-white font-semibold text-sm leading-snug">{event.venue_name}</p>
               <p className="text-white/60 text-xs mt-0.5">{[event.venue_city, event.venue_state].filter(Boolean).join(', ')}</p>
-            </div>
+              <p className="text-gala-mint text-xs font-bold mt-2 underline underline-offset-2">Book Now &rarr;</p>
+            </a>
           </div>
 
           {/* Bottom — CTA + countdown */}

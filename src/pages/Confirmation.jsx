@@ -74,6 +74,29 @@ export default function Confirmation() {
           )}
         </div>
 
+        {/* Hotel booking prompt */}
+        {!isWaitlist && (
+          <div className="mb-6 rounded-2xl border border-gala-mint/30 bg-gala-dark text-white p-6 flex flex-col sm:flex-row items-center gap-5">
+            <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gala-mint/20 flex items-center justify-center">
+              <svg className="w-6 h-6 text-gala-mint" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2 17.5V21m0-3.5V8a2 2 0 012-2h3.5a2 2 0 011.5.68A2 2 0 0110.5 6H14a2 2 0 012 2v2h4a2 2 0 012 2v5.5M2 17.5h20M22 17.5V21" />
+              </svg>
+            </div>
+            <div className="flex-1 text-center sm:text-left">
+              <p className="font-bold text-lg leading-tight">Book Your Hotel Stay</p>
+              <p className="text-white/70 text-sm mt-1">We've secured an exclusive group rate at the DoubleTree by Hilton Orlando. Reserve your room before the block fills up!</p>
+            </div>
+            <a
+              href="https://book.passkey.com/event/51263692/owner/213/home"
+              target="_blank"
+              rel="noreferrer"
+              className="flex-shrink-0 bg-gala-mint text-gala-dark font-extrabold px-6 py-3 rounded-full text-sm hover:bg-white transition-colors whitespace-nowrap"
+            >
+              Book Now &rarr;
+            </a>
+          </div>
+        )}
+
         {/* Event card */}
         <div className="card p-6 md:p-7 mb-6">
           <p className="text-xs uppercase tracking-[0.22em] text-gala-deep font-semibold mb-1">
