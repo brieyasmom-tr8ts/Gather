@@ -21,6 +21,7 @@ const emptyAttendee = () => ({
   _verifyingArmy: false,
   _armyChecked: false,
   _reviewRequested: false,
+  _notMember: false,
 });
 
 export default function Register() {
