@@ -73,9 +73,9 @@ export default function Scanner() {
       if (r.status === 401) return navigate('/admin/login');
       const data = await r.json();
       if (data.status === 'checked_in') {
-        setResult({ type: 'success', title: 'Checked in', name: `${data.attendee.first_name} ${data.attendee.last_name}`, detail: data.attendee.email, vip: data.attendee.vip_cocktail, giverArmy: data.attendee.is_giver_army });
+        setResult({ type: 'success', title: 'Checked in', name: `${data.attendee.first_name} ${data.attendee.last_name}`, detail: data.attendee.email, vip: data.attendee.vip_cocktail, giverArmy: data.attendee.is_giver_army, giverArmyTenure: data.attendee.giver_army_tenure });
       } else if (data.status === 'already_checked_in') {
-        setResult({ type: 'warning', title: 'Already checked in', name: `${data.attendee.first_name} ${data.attendee.last_name}`, detail: `at ${new Date(data.attendee.checked_in_at).toLocaleTimeString()}`, vip: data.attendee.vip_cocktail, giverArmy: data.attendee.is_giver_army });
+        setResult({ type: 'warning', title: 'Already checked in', name: `${data.attendee.first_name} ${data.attendee.last_name}`, detail: `at ${new Date(data.attendee.checked_in_at).toLocaleTimeString()}`, vip: data.attendee.vip_cocktail, giverArmy: data.attendee.is_giver_army, giverArmyTenure: data.attendee.giver_army_tenure });
       } else if (data.status === 'waitlist') {
         setResult({ type: 'error', title: 'Waitlist', name: 'This attendee is on the waitlist', detail: 'Please confirm manually before check-in' });
       } else if (data.status === 'cancelled') {
@@ -210,31 +210,43 @@ export default function Scanner() {
 
 function ResultOverlay({ result, onClose }) {
   const bg = {
-    success: 'bg-emerald-500/95',
-    warning: 'bg-amber-500/95',
-    error: 'bg-red-500/95',
-  }[result.type] || 'bg-gray-700/95';
+    success: 'bg-emerald-600',
+    warning: 'bg-amber-500',
+    error: 'bg-red-600',
+  }[result.type] || 'bg-gray-700';
 
   return (
-    <div className={`fixed inset-0 ${bg} flex items-center justify-center z-30 animate-fade-in`}>
-      <button onClick={onClose} className="absolute top-5 right-6 text-white/90 text-xl">×</button>
-      <div className="text-center text-white px-6">
+    <div className={`fixed inset-0 ${bg} flex flex-col items-center justify-center z-30 animate-fade-in`}>
+      <button onClick={onClose} className="absolute top-5 right-6 text-white/80 text-3xl leading-none">×</button>
+
+      {/* Check-in status */}
+      <div className="text-center text-white px-6 mb-6">
         <h2 className="text-4xl font-extrabold mb-2">{result.title}</h2>
-        <p className="text-2xl font-medium mb-1 opacity-95">{result.name}</p>
-        {result.detail && <p className="text-lg opacity-80">{result.detail}</p>}
-        <div className="flex justify-center gap-2 mt-4">
-          {result.giverArmy ? (
-            <span className="px-4 py-1.5 rounded-full bg-white/20 text-white text-sm font-bold">
-              Giver Army
-            </span>
-          ) : null}
-          {result.vip ? (
-            <span className="px-4 py-1.5 rounded-full bg-yellow-400 text-gray-900 text-sm font-bold">
-              ⭐ VIP Cocktail Hour
-            </span>
+        <p className="text-3xl font-bold opacity-95">{result.name}</p>
+        {result.detail && <p className="text-lg opacity-75 mt-1">{result.detail}</p>}
+      </div>
+
+      {/* Giver Army — full-width bold block, always shown */}
+      {result.giverArmy ? (
+        <div className="w-full max-w-sm mx-6 bg-yellow-400 text-gray-900 rounded-2xl py-5 px-6 text-center shadow-lg">
+          <div className="text-4xl mb-1">⭐</div>
+          <div className="text-2xl font-black tracking-wide uppercase">Giver Army</div>
+          {result.giverArmyTenure ? (
+            <div className="text-base font-semibold mt-1 opacity-80">{result.giverArmyTenure}</div>
           ) : null}
         </div>
-      </div>
+      ) : (
+        <div className="w-full max-w-sm mx-6 bg-white/15 text-white/70 rounded-2xl py-4 px-6 text-center">
+          <div className="text-lg font-semibold">Not Giver Army</div>
+        </div>
+      )}
+
+      {/* VIP badge */}
+      {result.vip ? (
+        <div className="mt-3 px-6 py-2 rounded-full bg-white/25 text-white font-bold text-base">
+          ⭐ VIP Cocktail Hour
+        </div>
+      ) : null}
     </div>
   );
 }
