@@ -15,6 +15,7 @@ export default function AttendeesTab({ showToast, onDataChange }) {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(new Set());
   const [edit, setEdit] = useState(null);
+  const [adding, setAdding] = useState(false);
 
   const queryString = useMemo(() => {
     const q = new URLSearchParams();
@@ -139,6 +140,7 @@ export default function AttendeesTab({ showToast, onDataChange }) {
         <Select label="Cancelled" value={filters.cancelled} onChange={(v) => setFilters((f) => ({ ...f, cancelled: v }))}
                 options={[['no', 'Active'], ['yes', 'Cancelled only']]} />
         <div className="ml-auto flex gap-2">
+          <button onClick={() => setAdding(true)} className="btn-primary text-sm py-2">+ Add Attendee</button>
           <button onClick={exportCsv} className="btn-secondary text-sm py-2">Export CSV</button>
           <button onClick={openBadges} className="btn-secondary text-sm py-2">
             {selected.size ? `Badges (${selected.size})` : 'All Badges'}
@@ -238,6 +240,18 @@ export default function AttendeesTab({ showToast, onDataChange }) {
           onSaved={() => { setEdit(null); load(); onDataChange?.(); showToast('Attendee updated'); }}
         />
       )}
+
+      {adding && (
+        <AddAttendeeModal
+          onClose={() => setAdding(false)}
+          onSaved={(data) => {
+            setAdding(false); load(); onDataChange?.();
+            const name = `${data.attendee.first_name} ${data.attendee.last_name}`;
+            if (data.emailError) showToast(`${name} added, but email failed: ${data.emailError}`, 'warning');
+            else showToast(data.emailSent ? `${name} added — confirmation sent` : `${name} added`);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -316,6 +330,86 @@ function EditAttendeeModal({ attendee, onClose, onSaved }) {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function AddAttendeeModal({ onClose, onSaved }) {
+  const [form, setForm] = useState({
+    firstName: '', lastName: '', email: '', phone: '',
+    isGiverArmy: false, giverArmyTenure: '', vipCocktail: false,
+    mediaConsent: false, addToWaitlist: false, sendEmail: true,
+  });
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
+  const set = (patch) => setForm((f) => ({ ...f, ...patch }));
+
+  const save = async (e) => {
+    e.preventDefault();
+    setSaving(true); setErr('');
+    try {
+      const r = await fetch('/api/admin/add-attendee', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      const d = await r.json();
+      if (r.ok) onSaved(d);
+      else setErr(d.error || 'Failed to add attendee');
+    } catch {
+      setErr('Failed to add attendee');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <form onSubmit={save} className="bg-white rounded-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-lg font-bold text-gala-dark mb-4">Add attendee</h3>
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <input required className="input-field" value={form.firstName} onChange={(e) => set({ firstName: e.target.value })} placeholder="First name *" />
+            <input required className="input-field" value={form.lastName} onChange={(e) => set({ lastName: e.target.value })} placeholder="Last name *" />
+          </div>
+          <input required type="email" className="input-field" value={form.email} onChange={(e) => set({ email: e.target.value })} placeholder="Email *" />
+          <input type="tel" className="input-field" value={form.phone} onChange={(e) => set({ phone: e.target.value })} placeholder="Phone (optional)" />
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={form.isGiverArmy} onChange={(e) => set({ isGiverArmy: e.target.checked })} />
+            Giver Army member
+          </label>
+          {form.isGiverArmy && (
+            <>
+              <select className="input-field" value={form.giverArmyTenure} onChange={(e) => set({ giverArmyTenure: e.target.value })}>
+                <option value="">— tenure —</option>
+                {Object.entries(TENURE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={form.vipCocktail} onChange={(e) => set({ vipCocktail: e.target.checked })} />
+                Attending VIP cocktail hour
+              </label>
+            </>
+          )}
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={form.mediaConsent} onChange={(e) => set({ mediaConsent: e.target.checked })} />
+            Photo/video consent given
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={form.addToWaitlist} onChange={(e) => set({ addToWaitlist: e.target.checked })} />
+            Add to waitlist instead of confirmed
+          </label>
+          {!form.addToWaitlist && (
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={form.sendEmail} onChange={(e) => set({ sendEmail: e.target.checked })} />
+              Send confirmation email with ticket
+            </label>
+          )}
+          {err && <p className="text-red-500 text-sm">{err}</p>}
+          <div className="flex gap-2 pt-2">
+            <button type="button" onClick={onClose} className="btn-secondary flex-1">Cancel</button>
+            <button type="submit" disabled={saving} className="btn-primary flex-1">{saving ? 'Adding…' : 'Add attendee'}</button>
+          </div>
+        </div>
+      </form>
     </div>
   );
 }
