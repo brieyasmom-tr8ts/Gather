@@ -17,6 +17,9 @@ export default function EmailTab({ showToast }) {
   const [testTo, setTestTo] = useState('');
   const [sending, setSending] = useState(false);
   const [bulkAudience, setBulkAudience] = useState('all');
+  const [scheduleAt, setScheduleAt] = useState('');
+  const [scheduleAudience, setScheduleAudience] = useState('all');
+  const [scheduleRefresh, setScheduleRefresh] = useState(0);
 
   const load = useCallback(async () => {
     const r = await fetch('/api/admin/templates');
@@ -78,9 +81,29 @@ export default function EmailTab({ showToast }) {
     else showToast(data.error || 'Bulk send failed', 'error');
   };
 
+  const schedule = async () => {
+    if (!scheduleAt) return showToast('Pick a date and time', 'error');
+    if (hasUnsaved && !confirm('You have unsaved changes to this template. Scheduled emails use the SAVED version. Schedule anyway?')) return;
+    const when = new Date(scheduleAt);
+    const r = await fetch('/api/admin/scheduled-emails', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: activeSlug, audience: scheduleAudience, sendAt: when.toISOString() }),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (r.ok) {
+      showToast(`Scheduled for ${when.toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`);
+      setScheduleAt('');
+      setScheduleRefresh((n) => n + 1);
+    } else showToast(data.error || 'Could not schedule', 'error');
+  };
+
   const active = templates.find((t) => t.slug === activeSlug);
+  const hasUnsaved = !!(active && draft && (draft.subject !== active.subject || draft.body !== active.body));
 
   return (
+    <div className="space-y-6">
+    <EmailHealth />
+    <ScheduledList templates={templates} showToast={showToast} refreshKey={scheduleRefresh} />
     <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-6">
       <aside className="card p-2 h-fit">
         <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold px-3 pt-2">Templates</p>
@@ -179,9 +202,182 @@ export default function EmailTab({ showToast }) {
               </div>
               <p className="text-xs text-gray-400 mt-2">Bulk emails use the current (unsaved) draft subject/body.</p>
             </div>
+
+            <div className="card p-5">
+              <h3 className="font-semibold text-gala-dark mb-3">Schedule send</h3>
+              <div className="flex flex-wrap gap-2 items-center">
+                <input
+                  type="datetime-local"
+                  className="input-field max-w-[240px]"
+                  value={scheduleAt}
+                  onChange={(e) => setScheduleAt(e.target.value)}
+                />
+                <select
+                  className="input-field max-w-xs"
+                  value={scheduleAudience}
+                  onChange={(e) => setScheduleAudience(e.target.value)}
+                >
+                  {AUDIENCE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+                <button onClick={schedule} className="btn-primary text-sm">Schedule</button>
+              </div>
+              <p className="text-xs text-gray-400 mt-2">
+                Time is in your computer's time zone ({Intl.DateTimeFormat().resolvedOptions().timeZone}).
+                Scheduled emails use the <strong>saved</strong> template at the moment they send, so you can keep editing until then.
+                They usually go out within 5–15 minutes of the scheduled time.
+              </p>
+              {hasUnsaved && <p className="text-xs text-amber-600 mt-1">You have unsaved changes — click "Save template" first.</p>}
+            </div>
           </>
         )}
       </div>
+    </div>
+    </div>
+  );
+}
+
+const AUDIENCE_LABEL = Object.fromEntries(AUDIENCE_OPTIONS.map((o) => [o.value, o.label]));
+
+function fmt(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+function ScheduledList({ showToast, refreshKey }) {
+  const [items, setItems] = useState([]);
+  const load = useCallback(async () => {
+    try {
+      const r = await fetch('/api/admin/scheduled-emails');
+      const d = await r.json();
+      setItems(d.scheduled || []);
+    } catch { /* ignore */ }
+  }, []);
+  useEffect(() => { load(); }, [load, refreshKey]);
+  useEffect(() => {
+    const t = setInterval(load, 30000);
+    return () => clearInterval(t);
+  }, [load]);
+
+  const cancel = async (id) => {
+    if (!confirm('Cancel this scheduled email?')) return;
+    const r = await fetch(`/api/admin/scheduled-emails?id=${id}`, { method: 'DELETE' });
+    const d = await r.json().catch(() => ({}));
+    if (r.ok) { showToast('Scheduled email cancelled'); load(); }
+    else showToast(d.error || 'Could not cancel', 'error');
+  };
+
+  const tone = {
+    pending: 'text-gala-deep bg-gala-mint/20', sending: 'text-amber-700 bg-amber-50',
+    sent: 'text-green-700 bg-green-50', failed: 'text-red-700 bg-red-50', cancelled: 'text-gray-500 bg-gray-100',
+  };
+  const label = { pending: 'Scheduled', sending: 'Sending…', sent: 'Sent', failed: 'Failed', cancelled: 'Cancelled' };
+
+  return (
+    <div className="card p-5">
+      <h3 className="font-semibold text-gala-dark mb-3">Scheduled emails</h3>
+      {items.length === 0 ? (
+        <p className="text-sm text-gray-400">Nothing scheduled yet. Pick a template below and use "Schedule send".</p>
+      ) : (
+        <div className="divide-y divide-gray-100">
+          {items.map((s) => (
+            <div key={s.id} className="py-3 flex flex-wrap items-center gap-3">
+              <div className="flex-1 min-w-[200px]">
+                <p className="font-medium text-gala-dark text-sm">{s.template_name || s.slug}</p>
+                <p className="text-xs text-gray-500">
+                  {fmt(s.send_at)} · {AUDIENCE_LABEL[s.audience] || s.audience}
+                  {s.status !== 'pending' && s.status !== 'cancelled' && (
+                    <> · {s.sent_count} of {s.recipient_count} sent{s.failed_count ? `, ${s.failed_count} failed` : ''}</>
+                  )}
+                </p>
+                {s.last_error && s.failed_count > 0 && <p className="text-xs text-red-500 mt-0.5 break-all">{s.last_error}</p>}
+              </div>
+              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${tone[s.status] || tone.cancelled}`}>
+                {label[s.status] || s.status}
+              </span>
+              {s.status === 'pending' && (
+                <button onClick={() => cancel(s.id)} className="text-xs text-red-500 hover:text-red-700">Cancel</button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EmailHealth() {
+  const [st, setSt] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const check = useCallback(async () => {
+    setLoading(true);
+    try {
+      const r = await fetch('/api/admin/email-status');
+      setSt(await r.json());
+    } catch { setSt({ error: 'Could not load email status' }); }
+    finally { setLoading(false); }
+  }, []);
+  useEffect(() => { check(); }, [check]);
+
+  const Row = ({ ok, children }) => (
+    <p className="text-sm flex items-start gap-2">
+      <span className={ok === true ? 'text-green-600' : ok === false ? 'text-red-600' : 'text-gray-400'}>
+        {ok === true ? '✓' : ok === false ? '✗' : '•'}
+      </span>
+      <span className="text-gray-700">{children}</span>
+    </p>
+  );
+
+  const healthy = st && st.apiKeyConfigured && st.apiKeyValid && st.senderVerified !== false;
+
+  return (
+    <div className="card p-5">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-semibold text-gala-dark">
+          Email status {st && (healthy
+            ? <span className="ml-2 text-xs font-medium text-green-700 bg-green-50 px-2 py-0.5 rounded-full">Working</span>
+            : <span className="ml-2 text-xs font-medium text-red-700 bg-red-50 px-2 py-0.5 rounded-full">Needs attention</span>)}
+        </h3>
+        <button onClick={check} disabled={loading} className="text-xs text-gala-deep hover:underline">
+          {loading ? 'Checking…' : 'Re-check'}
+        </button>
+      </div>
+      {!st ? <p className="text-sm text-gray-400">Checking…</p> : (
+        <div className="grid md:grid-cols-2 gap-x-8 gap-y-1">
+          <div className="space-y-1">
+            <Row ok={st.apiKeyConfigured}>{st.apiKeyConfigured ? 'Brevo API key is set' : 'BREVO_API_KEY is not set in Cloudflare — no emails will send'}</Row>
+            {st.apiKeyConfigured && (
+              <Row ok={st.apiKeyValid}>
+                {st.apiKeyValid
+                  ? <>Brevo key works{st.account?.credits != null ? ` · ${st.account.credits} email credits left` : ''}</>
+                  : (st.error || 'Brevo key is not valid')}
+              </Row>
+            )}
+            {st.apiKeyValid && (
+              <Row ok={st.senderVerified}>
+                {st.senderVerified ? <>Sender verified: {st.from}</> : <>Sender <strong>{st.from}</strong> is not verified in Brevo</>}
+              </Row>
+            )}
+            <Row ok={st.last24h?.failed ? false : (st.last24h?.sent ? true : null)}>
+              Last 24h: {st.last24h?.sent || 0} sent, {st.last24h?.failed || 0} failed
+              {st.last24h?.skipped ? `, ${st.last24h.skipped} skipped` : ''}
+            </Row>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-1">Recent signup emails</p>
+            {st.recent?.length ? (
+              <ul className="text-xs space-y-0.5 max-h-40 overflow-y-auto">
+                {st.recent.map((r, i) => (
+                  <li key={i} className="flex gap-2">
+                    <span className={r.status === 'sent' ? 'text-green-600' : 'text-red-600'}>{r.status === 'sent' ? '✓' : '✗'}</span>
+                    <span className="text-gray-600 truncate">{r.email}</span>
+                    <span className="text-gray-400 ml-auto whitespace-nowrap">{fmt(r.created_at.replace(' ', 'T') + 'Z')}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : <p className="text-xs text-gray-400">No signup emails recorded yet (tracking starts with this update).</p>}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

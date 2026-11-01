@@ -1,6 +1,7 @@
 // Admin: manually add an attendee (bypasses CAPTCHA and, by default, capacity).
 // Creates a new registration group with a single attendee.
 import { sendTemplateToAttendee } from '../../lib/email.js';
+import { logEmail } from '../../lib/scheduled.js';
 
 const VALID_TENURES = ['new', '1year', '2-3years', '4-5years', '5plus'];
 
@@ -42,7 +43,7 @@ export async function onRequestPost(context) {
       'INSERT INTO registrations (group_id, edit_token, total_attendees, is_waitlist) VALUES (?, ?, 1, ?)'
     ).bind(groupId, editToken, addToWaitlist ? 1 : 0).run();
 
-    await env.DB.prepare(
+    const ins = await env.DB.prepare(
       `INSERT INTO attendees (
          ticket_id, registration_group_id,
          first_name, last_name, email, phone,
@@ -71,6 +72,10 @@ export async function onRequestPost(context) {
       } catch (e) {
         emailError = e.message || 'Email failed to send';
       }
+      await logEmail(env.DB, {
+        attendeeId: ins.meta?.last_row_id, email, kind: 'confirmation (admin added)',
+        status: emailSent ? 'sent' : 'failed', error: emailError,
+      });
     }
 
     return json({ ok: true, attendee, emailSent, emailError }, 201);

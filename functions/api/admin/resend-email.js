@@ -1,5 +1,6 @@
 // Admin: resend the confirmation email to one attendee.
 import { sendTemplateToAttendee } from '../../lib/email.js';
+import { logEmail } from '../../lib/scheduled.js';
 
 export async function onRequestPost(context) {
   const { env, request } = context;
@@ -24,6 +25,10 @@ export async function onRequestPost(context) {
     slug: 'confirmation',
     baseUrl,
     editToken: attendee.edit_token,
+  });
+  await logEmail(env.DB, {
+    attendeeId: attendee.id, email: attendee.email, kind: 'confirmation (resend)',
+    status: result.ok ? 'sent' : 'failed', error: result.ok ? null : result.error,
   });
   return json(result, result.ok ? 200 : 500);
 }

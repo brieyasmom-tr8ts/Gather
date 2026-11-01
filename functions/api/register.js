@@ -1,6 +1,7 @@
 // Public registration endpoint — creates a group + attendees, with waitlist fallback.
 import { buildPublicEvent, countConfirmedAttendees } from '../lib/event.js';
 import { sendTemplateToAttendee, sendEmail } from '../lib/email.js';
+import { logEmail } from '../lib/scheduled.js';
 
 const VALID_TENURES = ['new', '1year', '2-3years', '4-5years', '5plus'];
 
@@ -89,7 +90,7 @@ export async function onRequestPost(context) {
     const created = [];
     for (const a of attendees) {
       const ticketId = crypto.randomUUID();
-      await env.DB.prepare(
+      const ins = await env.DB.prepare(
         `INSERT INTO attendees (
            ticket_id, registration_group_id,
            first_name, last_name, email, phone,
@@ -109,6 +110,7 @@ export async function onRequestPost(context) {
       ).run();
 
       created.push({
+        id: ins.meta?.last_row_id,
         ticket_id: ticketId,
         first_name: a.firstName.trim(),
         last_name: a.lastName.trim(),
@@ -116,14 +118,30 @@ export async function onRequestPost(context) {
       });
     }
 
-    // Send confirmation emails — non-blocking
-    if (env.BREVO_API_KEY && !isWaitlist) {
+    // Send confirmation emails — non-blocking, but every outcome is logged so
+    // failures show up in the admin Email tab instead of disappearing.
+    if (!isWaitlist) {
       const baseUrl = env.BASE_URL || `https://${request.headers.get('host')}`;
-      context.waitUntil(Promise.all(created.map((a) =>
-        sendTemplateToAttendee({
-          db: env.DB, env, attendee: a, slug: 'confirmation', baseUrl, editToken,
-        }).catch(() => {})
-      )));
+      context.waitUntil(Promise.all(created.map(async (a) => {
+        let result;
+        if (!env.BREVO_API_KEY) {
+          result = { ok: false, skipped: true, error: 'BREVO_API_KEY not configured' };
+        } else {
+          try {
+            result = await sendTemplateToAttendee({
+              db: env.DB, env, attendee: a, slug: 'confirmation', baseUrl, editToken,
+            });
+          } catch (e) {
+            result = { ok: false, error: e.message || 'Send failed' };
+          }
+        }
+        if (!result.ok) console.error('confirmation email failed', a.email, result.error);
+        await logEmail(env.DB, {
+          attendeeId: a.id, email: a.email, kind: 'confirmation',
+          status: result.ok ? 'sent' : result.skipped ? 'skipped' : 'failed',
+          error: result.ok ? null : result.error,
+        });
+      })));
     }
 
     // Notify info@givesendgo.org about Giver Army review requests
@@ -151,7 +169,7 @@ export async function onRequestPost(context) {
       groupId,
       editToken,
       isWaitlist,
-      attendees: created,
+      attendees: created.map(({ id, ...rest }) => rest),
     }, 201);
   } catch (err) {
     console.error('register error', err);

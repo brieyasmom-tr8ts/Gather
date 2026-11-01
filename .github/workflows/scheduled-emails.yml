@@ -1,0 +1,29 @@
+name: Send scheduled emails
+
+# Runs every 5 minutes. The site only sends emails an admin has scheduled
+# whose send time has passed, so running often is safe.
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: scheduled-emails
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Process due emails
+        env:
+          SITE_URL: ${{ vars.SITE_URL || 'https://givesendgo-gala.pages.dev' }}
+        run: |
+          # Each call sends a batch; keep calling until nothing is left.
+          for i in $(seq 1 60); do
+            resp=$(curl -sS -m 60 -X POST "$SITE_URL/api/cron/scheduled-emails" || echo '{}')
+            echo "$resp"
+            remaining=$(echo "$resp" | jq -r '.remaining // 0')
+            if [ "$remaining" = "0" ]; then break; fi
+          done
