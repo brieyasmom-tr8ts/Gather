@@ -18,7 +18,7 @@ jobs:
     steps:
       - name: Process due emails
         env:
-          SITE_URL: ${{ vars.SITE_URL || 'https://givesendgo-gala.pages.dev' }}
+          SITE_URL: ${{ vars.SITE_URL || 'https://gala.giverarmy.com' }}
         run: |
           # Each call sends a batch; keep calling until nothing is left.
           for i in $(seq 1 60); do
