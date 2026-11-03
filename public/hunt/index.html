@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gala Scavenger Hunt</title>
+<style>
+  :root { --green:#1f8a4c; --dark:#12372a; --bg:#f4f7f5; --card:#fff; --line:#dbe5df; --muted:#5d6b64; --warn:#b3261e; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: -apple-system, system-ui, Segoe UI, Roboto, sans-serif; background:var(--bg); color:#17211c; }
+  header { background:var(--dark); color:#fff; padding:14px 16px; position:sticky; top:0; z-index:5; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  header h1 { font-size:17px; margin:0; }
+  header .score { font-weight:700; background:var(--green); padding:4px 10px; border-radius:99px; font-size:14px; }
+  main { max-width:640px; margin:0 auto; padding:12px 12px 80px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin:10px 0; }
+  .card.done { border-color:var(--green); }
+  .round { font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--green); font-weight:700; margin:20px 4px 4px; }
+  .num { display:inline-block; background:var(--dark); color:#fff; border-radius:6px; padding:1px 8px; font-size:13px; font-weight:700; margin-right:6px; }
+  .pts { float:right; color:var(--muted); font-size:13px; }
+  .text { margin:8px 0 10px; line-height:1.4; }
+  input[type=text], input[type=password], textarea { width:100%; padding:11px; font-size:16px; border:1px solid var(--line); border-radius:8px; margin:4px 0; font-family:inherit; }
+  textarea { min-height:70px; }
+  button { background:var(--green); color:#fff; border:0; border-radius:8px; padding:11px 16px; font-size:16px; font-weight:600; width:100%; margin-top:6px; }
+  button.secondary { background:#e8efeb; color:var(--dark); }
+  button:disabled { opacity:.55; }
+  label.file { display:block; text-align:center; padding:11px; border:2px dashed var(--green); color:var(--green); border-radius:8px; font-weight:600; margin:4px 0; }
+  label.file input { display:none; }
+  .status { font-size:13px; margin-top:6px; color:var(--muted); }
+  .err { color:var(--warn); font-size:14px; margin:6px 0; }
+  .badge { font-size:12px; padding:2px 8px; border-radius:99px; background:#e8efeb; color:var(--dark); }
+  .badge.scored { background:var(--green); color:#fff; }
+  img.thumb, video.thumb { width:100%; max-height:220px; object-fit:cover; border-radius:8px; margin-top:8px; background:#000; }
+  .tabs { display:flex; gap:6px; margin:8px 0; }
+  .tabs button { margin:0; background:#e8efeb; color:var(--dark); }
+  .tabs button.on { background:var(--green); color:#fff; }
+  table { width:100%; border-collapse:collapse; }
+  td, th { padding:10px 6px; text-align:left; border-bottom:1px solid var(--line); }
+  td.r, th.r { text-align:right; }
+  .locked { background:#fff3cd; border:1px solid #e6cf7a; padding:10px; border-radius:8px; margin:10px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">Gala Scavenger Hunt</h1>
+  <span class="score" id="score" hidden></span>
+</header>
+<main id="app"></main>
+
+<script src="items.js"></script>
+<script>
+const $ = (s) => document.querySelector(s);
+const app = $('#app');
+const ITEMS = window.HUNT_ITEMS;
+// Private team link: /hunt/?c=CODE. The code is saved on this phone and removed from the address bar.
+(function () {
+  try {
+    const c = new URLSearchParams(location.search).get('c');
+    if (c) { localStorage.setItem('hunt_code', c); history.replaceState(null, '', location.pathname); }
+  } catch (e) {}
+})();
+let code = ''; try { code = localStorage.getItem('hunt_code') || ''; } catch (e) {}
+let token = localStorage.getItem('hunt_token') || '';
+const mediaUrl = (k) => '/api/hunt/media/' + encodeURIComponent(String(k).replace(/^hunt\//, '')) + '?c=' + encodeURIComponent(code);
+let me = null, subs = {}, locked = false, tab = 'hunt';
+
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+async function api(path, opts = {}) {
+  opts.headers = Object.assign({}, opts.headers, { 'x-hunt-code': code }, token ? { authorization: 'Bearer ' + token } : {});
+  const r = await fetch('/api/hunt/' + path, opts);
+  let data = {};
+  try { data = await r.json(); } catch (e) {}
+  if (!r.ok) throw new Error(data.error || 'Something went wrong');
+  return data;
+}
+
+function renderJoin(err) {
+  $('#score').hidden = true;
+  app.innerHTML = `
+    <div class="card">
+      <h2 style="margin-top:0">Join your team</h2>
+      <p>One phone per team does the uploading. Pick a team name and a 4 digit PIN. Teammates can use the same name and PIN on their own phones to see the same hunt.</p>
+      <input type="text" id="tname" placeholder="Team name" maxlength="40" autocomplete="off">
+      <input type="password" id="tpin" placeholder="PIN" inputmode="numeric" maxlength="12">
+      ${err ? `<div class="err">${esc(err)}</div>` : ''}
+      <button id="go">Start hunting</button>
+    </div>`;
+  $('#go').onclick = async () => {
+    try {
+      const d = await api('join', { method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ name: $('#tname').value, pin: $('#tpin').value }) });
+      token = d.token; localStorage.setItem('hunt_token', token);
+      await load();
+    } catch (e) { renderJoin(e.message); }
+  };
+}
+
+async function load() {
+  try {
+    const d = await api('me');
+    me = d.team; locked = d.locked;
+    subs = {}; d.submissions.forEach(s => subs[s.item_id] = s);
+    render();
+  } catch (e) {
+    token = ''; localStorage.removeItem('hunt_token'); renderJoin();
+  }
+}
+
+function myScore() { return Object.values(subs).reduce((a, s) => a + (s.points || 0), 0); }
+
+function render() {
+  $('#title').textContent = me.name;
+  const sc = $('#score'); sc.hidden = false; sc.textContent = myScore() + ' pts judged';
+  app.innerHTML = `
+    <div class="tabs">
+      <button id="t1" class="${tab==='hunt'?'on':''}">The hunt</button>
+      <button id="t2" class="${tab==='board'?'on':''}">Leaderboard</button>
+    </div>
+    <div id="body"></div>`;
+  $('#t1').onclick = () => { tab = 'hunt'; render(); };
+  $('#t2').onclick = () => { tab = 'board'; render(); };
+  tab === 'hunt' ? renderHunt() : renderBoard();
+}
+
+function renderHunt() {
+  const done = Object.keys(subs).length;
+  let html = `<div class="card"><b>${done} of ${ITEMS.length}</b> submitted. Judges add points after review.</div>`;
+  if (locked) html += `<div class="locked">The hunt is closed. Submissions are locked.</div>`;
+  let lastRound = '';
+  ITEMS.forEach(it => {
+    if (it.round !== lastRound) { html += `<div class="round">${esc(it.round)}</div>`; lastRound = it.round; }
+    const s = subs[it.id];
+    const accept = it.kind === 'video' ? 'video/*' : 'image/*,video/*';
+    const needsText = it.kind === 'answer';
+    html += `<div class="card ${s ? 'done' : ''}" data-id="${it.id}">
+      <span class="pts">${it.pts} pts</span>
+      <span class="num">${it.id}</span>
+      ${s ? (s.points != null ? `<span class="badge scored">${s.points} pts</span>` : `<span class="badge">Submitted</span>`) : ''}
+      <div class="text">${esc(it.text)}</div>
+      ${s && s.media_key ? (s.media_type === 'video'
+        ? `<video class="thumb" src="${esc(mediaUrl(s.media_key))}" controls playsinline preload="metadata"></video>`
+        : `<img class="thumb" src="${esc(mediaUrl(s.media_key))}" alt="">`) : ''}
+      ${s && s.answer ? `<div class="status"><b>Answer:</b> ${esc(s.answer)}</div>` : ''}
+      ${locked ? '' : `
+      <label class="file">${s && s.media_key ? 'Replace' : (it.kind === 'video' ? 'Record or choose video' : 'Take or choose photo')}
+        <input type="file" accept="${accept}" ${it.kind==='video' ? 'capture' : ''} class="f">
+      </label>
+      <textarea class="a" placeholder="${needsText ? 'Your answer (required)' : 'Caption or answer (optional)'}">${esc(s ? s.answer : '')}</textarea>
+      <button class="send">${s ? 'Update' : 'Submit'}</button>
+      <div class="status"></div>`}
+    </div>`;
+  });
+  $('#body').innerHTML = html;
+
+  document.querySelectorAll('.card[data-id]').forEach(card => {
+    const send = card.querySelector('.send');
+    if (!send) return;
+    const id = card.dataset.id;
+    const status = card.querySelector('.status:last-child');
+    const fileInput = card.querySelector('.f');
+    fileInput.onchange = () => { status.textContent = fileInput.files[0] ? 'Ready: ' + fileInput.files[0].name : ''; };
+    send.onclick = async () => {
+      const fd = new FormData();
+      fd.append('item_id', id);
+      fd.append('answer', card.querySelector('.a').value);
+      if (fileInput.files[0]) fd.append('file', fileInput.files[0]);
+      send.disabled = true; status.textContent = 'Uploading...';
+      try {
+        await api('submit', { method: 'POST', body: fd });
+        await load();
+      } catch (e) { status.textContent = e.message; status.className = 'status err'; send.disabled = false; }
+    };
+  });
+}
+
+async function renderBoard() {
+  $('#body').innerHTML = '<div class="card">Loading...</div>';
+  try {
+    const rows = await api('leaderboard');
+    $('#body').innerHTML = `<div class="card"><table>
+      <tr><th>#</th><th>Team</th><th class="r">Done</th><th class="r">Points</th></tr>
+      ${rows.map((r, i) => `<tr><td>${i+1}</td><td>${esc(r.name)}</td><td class="r">${r.done}</td><td class="r"><b>${r.score}</b></td></tr>`).join('')}
+    </table></div>`;
+  } catch (e) { $('#body').innerHTML = `<div class="card err">${esc(e.message)}</div>`; }
+}
+
+if (!code) {
+  app.innerHTML = '<div class="card"><h2 style="margin-top:0">Use your team link</h2><p>Open the private hunt link you were given. It has the access code built in.</p></div>';
+} else { token ? load() : renderJoin(); }
+</script>
+</body>
+</html>

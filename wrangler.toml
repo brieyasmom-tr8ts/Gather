@@ -7,3 +7,7 @@ pages_build_output_dir = "dist"
 binding = "DB"
 database_name = "gala-db"
 database_id = "ef69bfe1-70a2-4a31-b12f-f668240b34ef"
+
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "gala-hunt-media"
