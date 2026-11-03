@@ -37,8 +37,9 @@ async function ensureSchema(env) {
   schemaReady = true;
 }
 
+// Codes are trimmed and case-insensitive so a simple word is easy to remember and type.
 function safeEqual(a, b) {
-  a = String(a || ''); b = String(b || '');
+  a = String(a || '').trim().toLowerCase(); b = String(b || '').trim().toLowerCase();
   if (a.length !== b.length) return false;
   let r = 0;
   for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);

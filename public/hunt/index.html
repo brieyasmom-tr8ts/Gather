@@ -184,9 +184,26 @@ async function renderBoard() {
   } catch (e) { $('#body').innerHTML = `<div class="card err">${esc(e.message)}</div>`; }
 }
 
-if (!code) {
-  app.innerHTML = '<div class="card"><h2 style="margin-top:0">Use your team link</h2><p>Open the private hunt link you were given. It has the access code built in.</p></div>';
-} else { token ? load() : renderJoin(); }
+function renderCode(err) {
+  $('#score').hidden = true;
+  app.innerHTML = `
+    <div class="card">
+      <h2 style="margin-top:0">Enter the hunt code</h2>
+      <p>Use the private hunt link you were given, or type the hunt code here.</p>
+      <input type="text" id="hcode" placeholder="Hunt code" autocapitalize="none" autocomplete="off">
+      ${err ? `<div class="err">${esc(err)}</div>` : ''}
+      <button id="gocode">Continue</button>
+    </div>`;
+  $('#gocode').onclick = async () => {
+    code = $('#hcode').value.trim();
+    try {
+      await api('leaderboard');
+      try { localStorage.setItem('hunt_code', code); } catch (e) {}
+      token ? load() : renderJoin();
+    } catch (e) { code = ''; renderCode('That code didn\'t work. Check it and try again.'); }
+  };
+}
+if (!code) { renderCode(); } else { token ? load() : renderJoin(); }
 </script>
 </body>
 </html>
