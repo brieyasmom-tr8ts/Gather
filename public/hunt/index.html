@@ -13,7 +13,21 @@
   header .score { font-weight:700; background:var(--green); padding:4px 10px; border-radius:99px; font-size:14px; }
   main { max-width:640px; margin:0 auto; padding:12px 12px 80px; }
   .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin:10px 0; }
-  .card.done { border-color:var(--green); }
+  .card.done { border:2px solid var(--green); background:#eef8f1; }
+  .card.done .text { color:#3d5a49; }
+  .donepill { display:inline-block; background:var(--green); color:#fff; font-weight:700; font-size:13px; padding:3px 10px; border-radius:99px; margin-left:4px; }
+  .progress { height:12px; background:#e3ebe6; border-radius:99px; overflow:hidden; margin:8px 0 12px; }
+  .progress > div { height:100%; background:var(--green); border-radius:99px; transition:width .3s; }
+  .checks { display:grid; grid-template-columns:repeat(8, 1fr); gap:6px; }
+  .checks a { display:flex; align-items:center; justify-content:center; height:38px; border-radius:8px; font-weight:700; font-size:14px; text-decoration:none;
+              border:2px solid var(--line); color:var(--muted); background:#fff; }
+  .checks a.on { background:var(--green); border-color:var(--green); color:#fff; }
+  .checks a.busy { border-color:#e0a800; color:#8a6500; background:#fff8e1; }
+  .legend { font-size:12px; color:var(--muted); margin-top:8px; }
+  .filters { display:flex; gap:6px; margin:12px 0 0; }
+  .filters button { margin:0; padding:8px 6px; font-size:14px; background:#e8efeb; color:var(--dark); }
+  .filters button.on { background:var(--dark); color:#fff; }
+  .alldone { text-align:center; padding:24px 14px; color:var(--muted); }
   .round { font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--green); font-weight:700; margin:20px 4px 4px; }
   .num { display:inline-block; background:var(--dark); color:#fff; border-radius:6px; padding:1px 8px; font-size:13px; font-weight:700; margin-right:6px; }
   .pts { float:right; color:var(--muted); font-size:13px; }
@@ -159,10 +173,10 @@ function cardHtml(it) {
   if (p && p.uploading) state = `<div class="status">Uploading ${p.file.type.startsWith('video/') ? 'video' : 'photo'}… keep this page open.</div>`;
   else if (p && p.error) state = `<div class="err">Not saved yet: ${esc(p.error)}</div><button class="retry">Try upload again</button>`;
   else if (s && s.media_key) state = `<div class="status" style="color:var(--green)">✓ Saved</div>`;
-  return `<div class="card ${s ? 'done' : ''}" data-id="${it.id}">
+  return `<div class="card ${s ? 'done' : ''}" data-id="${it.id}" id="c${it.id}" style="scroll-margin-top:70px">
       <span class="pts">${it.pts} pts</span>
       <span class="num">${it.id}</span>
-      ${s ? (s.points != null ? `<span class="badge scored">${s.points} pts</span>` : `<span class="badge">Submitted</span>`) : ''}
+      ${s ? `<span class="donepill">✓ Done</span>${s.points != null ? ` <span class="badge scored">${s.points} pts awarded</span>` : ''}` : ''}
       <div class="text">${esc(it.text)}</div>
       ${s && s.media_key ? (s.media_type === 'video'
         ? `<video class="thumb" src="${esc(mediaUrl(s.media_key))}" controls playsinline preload="metadata"></video>`
@@ -180,9 +194,37 @@ function cardHtml(it) {
     </div>`;
 }
 
+let view = 'all'; try { view = localStorage.getItem('hunt_view') || 'all'; } catch (e) {}
+
 function updateSummary() {
-  const done = Object.keys(subs).length;
-  const el = $('#summary'); if (el) el.innerHTML = `<b>${done} of ${ITEMS.length}</b> submitted. Judges add points after review.`;
+  const done = ITEMS.filter(it => subs[it.id]).length;
+  const el = $('#summary');
+  if (el) el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:baseline">
+      <b style="font-size:18px">${done} of ${ITEMS.length} done</b>
+      <span class="status" style="margin:0">${ITEMS.length - done} to go</span>
+    </div>
+    <div class="progress"><div style="width:${Math.round(done / ITEMS.length * 100)}%"></div></div>
+    <div class="checks">${ITEMS.map(it => `<a href="#c${it.id}" data-jump="${it.id}" class="${subs[it.id] ? 'on' : (pending[it.id] ? 'busy' : '')}" aria-label="Challenge ${it.id}${subs[it.id] ? ' done' : ''}">${subs[it.id] ? '✓' : it.id}</a>`).join('')}</div>
+    <div class="legend">Green ✓ = done. Tap a number to jump to it. Judges add points after review.</div>
+    <div class="filters">
+      <button data-v="todo" class="${view==='todo'?'on':''}">To do (${ITEMS.length - done})</button>
+      <button data-v="done" class="${view==='done'?'on':''}">Done (${done})</button>
+      <button data-v="all" class="${view==='all'?'on':''}">All</button>
+    </div>`;
+  if (el) {
+    el.querySelectorAll('[data-v]').forEach(b => b.onclick = () => {
+      view = b.dataset.v; try { localStorage.setItem('hunt_view', view); } catch (e) {}
+      renderHunt();
+    });
+    el.querySelectorAll('[data-jump]').forEach(a => a.onclick = (e) => {
+      e.preventDefault();
+      const id = a.dataset.jump;
+      let card = document.querySelector(`.card[data-id="${id}"]`);
+      if (!card || card.style.display === 'none') { view = 'all'; renderHunt(); card = document.querySelector(`.card[data-id="${id}"]`); }
+      card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
   $('#score').textContent = myScore() + ' pts judged';
 }
 
@@ -253,10 +295,12 @@ function renderHunt() {
   let html = `<div class="card" id="summary"></div>`;
   if (locked) html += `<div class="locked">The hunt is closed. Submissions are locked.</div>`;
   let lastRound = '';
-  ITEMS.forEach(it => {
+  const shown = ITEMS.filter(it => view === 'all' || (view === 'done' ? !!subs[it.id] : (!subs[it.id] || pending[it.id])));
+  shown.forEach(it => {
     if (it.round !== lastRound) { html += `<div class="round">${esc(it.round)}</div>`; lastRound = it.round; }
     html += cardHtml(it);
   });
+  if (!shown.length) html += `<div class="card alldone">${view === 'todo' ? '🎉 Everything is done! Nice work.' : 'Nothing done yet. Pick a challenge and add a photo.'}</div>`;
   $('#body').innerHTML = html;
   updateSummary();
   document.querySelectorAll('.card[data-id]').forEach(bindCard);

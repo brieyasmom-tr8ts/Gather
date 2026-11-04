@@ -23,6 +23,21 @@
   table { width:100%; border-collapse:collapse; }
   td, th { padding:8px 6px; border-bottom:1px solid var(--line); text-align:left; }
   td.r, th.r { text-align:right; }
+  .card.scored { border:2px solid var(--green); background:#eef8f1; }
+  .card.needs { border:2px solid #e0a800; background:#fffbea; }
+  .tag { display:inline-block; font-size:12px; font-weight:700; padding:3px 9px; border-radius:99px; float:right; }
+  .tag.scored { background:var(--green); color:#fff; }
+  .tag.needs { background:#e0a800; color:#3a2a00; }
+  .boxes { display:grid; grid-template-columns:repeat(12, 1fr); gap:3px; min-width:220px; }
+  .boxes span { height:18px; border-radius:4px; background:#e3ebe6; font-size:10px; display:flex; align-items:center; justify-content:center; color:#8a9a91; }
+  .boxes span.sub { background:#e0a800; color:#3a2a00; }
+  .boxes span.ok { background:var(--green); color:#fff; }
+  .bar { height:8px; background:#e3ebe6; border-radius:99px; overflow:hidden; margin-top:4px; }
+  .bar > div { height:100%; background:var(--green); }
+  .key { font-size:12px; color:var(--muted); margin-top:6px; }
+  .key i { display:inline-block; width:12px; height:12px; border-radius:3px; vertical-align:-2px; margin:0 3px 0 10px; }
+  .teamrow { cursor:pointer; }
+  .teamrow:hover td { background:#f4f7f5; }
 </style>
 </head>
 <body>
@@ -64,6 +79,11 @@ async function load() {
 function draw(d) {
   document.getElementById('lockstate').textContent = d.locked ? 'LOCKED' : 'OPEN';
   const teams = d.teams;
+  const allSubs = d.submissions;
+  const total = window.HUNT_ITEMS.length;
+  const byTeam = {};
+  allSubs.forEach(s => { (byTeam[s.team_id] = byTeam[s.team_id] || {})[s.item_id] = s; });
+  const needsCount = allSubs.filter(s => s.points == null).length;
   let subs = d.submissions;
   if (filterTeam) subs = subs.filter(s => String(s.team_id) === filterTeam);
   if (filterPending) subs = subs.filter(s => s.points == null);
@@ -77,14 +97,20 @@ function draw(d) {
         <label><input type="checkbox" id="fp" ${filterPending?'checked':''}> Unscored only</label>
       </div>
     </div>
-    <div class="card"><b>Standings</b>
-      <table><tr><th>Team</th><th class="r">Done</th><th class="r">Score</th><th></th></tr>
-      ${teams.map(t => `<tr><td>${esc(t.name)}</td><td class="r">${t.done}</td><td class="r"><b>${t.score}</b></td>
-        <td class="r"><button class="alt bonus" data-t="${t.id}">+ Bonus</button></td></tr>`).join('')}</table>
+    <div class="card"><b>Standings &amp; progress</b>
+      ${needsCount ? `<span class="tag needs">${needsCount} need${needsCount === 1 ? 's' : ''} a score</span>` : `<span class="tag scored">✓ All scored</span>`}
+      <table><tr><th>Team</th><th>Challenges</th><th class="r">Done</th><th class="r">Score</th><th></th></tr>
+      ${teams.map(t => { const m = byTeam[t.id] || {}; return `<tr class="teamrow" data-t="${t.id}"><td><b>${esc(t.name)}</b></td>
+        <td><div class="boxes">${window.HUNT_ITEMS.map(it => { const s = m[it.id]; const c = !s ? '' : (s.points == null ? 'sub' : 'ok'); return `<span class="${c}" title="#${it.id}${s ? (s.points == null ? ' submitted, needs score' : ' scored ' + s.points) : ' not done'}">${it.id}</span>`; }).join('')}</div></td>
+        <td class="r"><b>${t.done}</b>/${total}<div class="bar"><div style="width:${Math.round(t.done / total * 100)}%"></div></div></td>
+        <td class="r"><b>${t.score}</b></td>
+        <td class="r"><button class="alt bonus" data-t="${t.id}">+ Bonus</button></td></tr>`; }).join('')}</table>
+      <div class="key"><i style="background:var(--green)"></i>Scored <i style="background:#e0a800"></i>Done, needs score <i style="background:#e3ebe6"></i>Not done · Tap a team to see only their entries</div>
     </div>
     <div class="grid">
     ${subs.map(s => { const it = ITEMS[s.item_id] || { text: '', pts: 0 }; return `
-      <div class="card">
+      <div class="card ${s.points == null ? 'needs' : 'scored'}">
+        ${s.points == null ? '<span class="tag needs">Needs score</span>' : `<span class="tag scored">✓ ${s.points} pts</span>`}
         <b>${esc(s.team)}</b> &middot; #${s.item_id} <span class="meta">(${it.pts} pts)</span>
         <div class="meta">${esc(it.text)}</div>
         ${s.media_key ? (s.media_type === 'video'
@@ -110,6 +136,10 @@ function draw(d) {
   });
   document.querySelectorAll('.full').forEach(b => b.onclick = async () => { await post('score', { id: +b.dataset.id, points: +b.dataset.p }); load(); });
   document.querySelectorAll('.zero').forEach(b => b.onclick = async () => { await post('score', { id: +b.dataset.id, points: 0 }); load(); });
+  document.querySelectorAll('.teamrow').forEach(r => r.onclick = (e) => {
+    if (e.target.closest('button')) return;
+    filterTeam = filterTeam === r.dataset.t ? '' : r.dataset.t; load();
+  });
   document.querySelectorAll('.bonus').forEach(b => b.onclick = async () => {
     const pts = prompt('Bonus points (negative for late penalty):'); if (pts === null) return;
     const note = prompt('Note (optional):') || '';
