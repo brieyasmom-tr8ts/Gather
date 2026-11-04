@@ -122,17 +122,44 @@ function render() {
   tab === 'hunt' ? renderHunt() : renderBoard();
 }
 
-function renderHunt() {
-  const done = Object.keys(subs).length;
-  let html = `<div class="card"><b>${done} of ${ITEMS.length}</b> submitted. Judges add points after review.</div>`;
-  if (locked) html += `<div class="locked">The hunt is closed. Submissions are locked.</div>`;
-  let lastRound = '';
-  ITEMS.forEach(it => {
-    if (it.round !== lastRound) { html += `<div class="round">${esc(it.round)}</div>`; lastRound = it.round; }
-    const s = subs[it.id];
-    const accept = it.kind === 'video' ? 'video/*' : 'image/*,video/*';
-    const needsText = it.kind === 'answer';
-    html += `<div class="card ${s ? 'done' : ''}" data-id="${it.id}">
+// Unsaved typed answers survive re-renders and page reloads.
+let drafts = {};
+const draftKey = () => 'hunt_drafts_' + (me ? me.id : '');
+function loadDrafts() { try { drafts = JSON.parse(localStorage.getItem(draftKey()) || '{}'); } catch (e) { drafts = {}; } }
+function saveDrafts() { try { localStorage.setItem(draftKey(), JSON.stringify(drafts)); } catch (e) {} }
+// Files picked but not yet confirmed saved (upload in progress or failed). Never thrown away.
+const pending = {};
+let uploadsInFlight = 0;
+window.addEventListener('beforeunload', (e) => {
+  if (uploadsInFlight > 0) { e.preventDefault(); e.returnValue = ''; }
+});
+
+// Shrink big phone photos before upload so they go faster on mall wifi/cell.
+async function shrinkImage(file) {
+  try {
+    if (!file.type.startsWith('image/') || file.size < 1500000 || file.type === 'image/gif') return file;
+    const bmp = await createImageBitmap(file);
+    const max = 2000, scale = Math.min(1, max / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(bmp.width * scale); c.height = Math.round(bmp.height * scale);
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    const blob = await new Promise((res) => c.toBlob(res, 'image/jpeg', 0.85));
+    if (!blob || blob.size >= file.size) return file;
+    return new File([blob], (file.name || 'photo').replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' });
+  } catch (e) { return file; }
+}
+
+function cardHtml(it) {
+  const s = subs[it.id];
+  const p = pending[it.id];
+  const accept = it.kind === 'video' ? 'video/*' : 'image/*,video/*';
+  const needsText = it.kind === 'answer';
+  const answerVal = drafts[it.id] != null ? drafts[it.id] : (s ? s.answer || '' : '');
+  let state = '';
+  if (p && p.uploading) state = `<div class="status">Uploading ${p.file.type.startsWith('video/') ? 'video' : 'photo'}… keep this page open.</div>`;
+  else if (p && p.error) state = `<div class="err">Not saved yet: ${esc(p.error)}</div><button class="retry">Try upload again</button>`;
+  else if (s && s.media_key) state = `<div class="status" style="color:var(--green)">✓ Saved</div>`;
+  return `<div class="card ${s ? 'done' : ''}" data-id="${it.id}">
       <span class="pts">${it.pts} pts</span>
       <span class="num">${it.id}</span>
       ${s ? (s.points != null ? `<span class="badge scored">${s.points} pts</span>` : `<span class="badge">Submitted</span>`) : ''}
@@ -140,37 +167,99 @@ function renderHunt() {
       ${s && s.media_key ? (s.media_type === 'video'
         ? `<video class="thumb" src="${esc(mediaUrl(s.media_key))}" controls playsinline preload="metadata"></video>`
         : `<img class="thumb" src="${esc(mediaUrl(s.media_key))}" alt="">`) : ''}
-      ${s && s.answer ? `<div class="status"><b>Answer:</b> ${esc(s.answer)}</div>` : ''}
+      ${state}
+      ${s && s.answer && locked ? `<div class="status"><b>Answer:</b> ${esc(s.answer)}</div>` : ''}
       ${locked ? '' : `
       <label class="file">${s && s.media_key ? 'Replace' : (it.kind === 'video' ? 'Record or choose video' : 'Take or choose photo')}
         <input type="file" accept="${accept}" ${it.kind==='video' ? 'capture' : ''} class="f">
       </label>
-      <textarea class="a" placeholder="${needsText ? 'Your answer (required)' : 'Caption or answer (optional)'}">${esc(s ? s.answer : '')}</textarea>
-      <button class="send">${s ? 'Update' : 'Submit'}</button>
-      <div class="status"></div>`}
+      <div class="status" style="margin-top:0">Photos and videos save automatically as soon as you pick them.</div>
+      <textarea class="a" placeholder="${needsText ? 'Your answer (required)' : 'Caption or answer (optional)'}">${esc(answerVal)}</textarea>
+      <button class="send">${s && s.answer ? 'Update answer' : 'Save answer'}</button>
+      <div class="status msg"></div>`}
     </div>`;
+}
+
+function updateSummary() {
+  const done = Object.keys(subs).length;
+  const el = $('#summary'); if (el) el.innerHTML = `<b>${done} of ${ITEMS.length}</b> submitted. Judges add points after review.`;
+  $('#score').textContent = myScore() + ' pts judged';
+}
+
+function refreshCard(id) {
+  const card = document.querySelector(`.card[data-id="${id}"]`);
+  if (!card) return;
+  const it = ITEMS.find(x => String(x.id) === String(id));
+  card.outerHTML = cardHtml(it);
+  bindCard(document.querySelector(`.card[data-id="${id}"]`));
+  updateSummary();
+}
+
+async function upload(id, { file, answer }) {
+  const fd = new FormData();
+  fd.append('item_id', id);
+  fd.append('answer', answer || '');
+  if (file) fd.append('file', file);
+  const d = await api('submit', { method: 'POST', body: fd });
+  if (d.submission) subs[id] = d.submission;
+  return d;
+}
+
+async function uploadFile(id, original) {
+  pending[id] = { file: original, uploading: true };
+  refreshCard(id);
+  uploadsInFlight++;
+  try {
+    const file = await shrinkImage(original);
+    const ans = drafts[id] != null ? drafts[id] : '';
+    await upload(id, { file, answer: ans });
+    delete pending[id];
+    if (ans) { delete drafts[id]; saveDrafts(); }
+  } catch (e) {
+    pending[id] = { file: original, error: e.message || 'Upload failed' };
+  } finally {
+    uploadsInFlight--;
+    refreshCard(id);
+  }
+}
+
+function bindCard(card) {
+  if (!card) return;
+  const id = card.dataset.id;
+  const fileInput = card.querySelector('.f');
+  const ta = card.querySelector('.a');
+  const send = card.querySelector('.send');
+  const retry = card.querySelector('.retry');
+  if (ta) ta.oninput = () => { drafts[id] = ta.value; saveDrafts(); };
+  if (fileInput) fileInput.onchange = () => { const f = fileInput.files[0]; if (f) uploadFile(id, f); };
+  if (retry) retry.onclick = () => uploadFile(id, pending[id].file);
+  if (send) send.onclick = async () => {
+    const msg = card.querySelector('.msg');
+    const ans = ta.value.trim();
+    if (!ans) { msg.textContent = 'Type an answer first. Photos save on their own.'; msg.className = 'status msg err'; return; }
+    send.disabled = true; msg.className = 'status msg'; msg.textContent = 'Saving…';
+    try {
+      await upload(id, { answer: ans });
+      delete drafts[id]; saveDrafts();
+      refreshCard(id);
+      const m2 = document.querySelector(`.card[data-id="${id}"] .msg`);
+      if (m2) { m2.textContent = '✓ Answer saved'; m2.style.color = 'var(--green)'; }
+    } catch (e) { msg.textContent = e.message; msg.className = 'status msg err'; send.disabled = false; }
+  };
+}
+
+function renderHunt() {
+  loadDrafts();
+  let html = `<div class="card" id="summary"></div>`;
+  if (locked) html += `<div class="locked">The hunt is closed. Submissions are locked.</div>`;
+  let lastRound = '';
+  ITEMS.forEach(it => {
+    if (it.round !== lastRound) { html += `<div class="round">${esc(it.round)}</div>`; lastRound = it.round; }
+    html += cardHtml(it);
   });
   $('#body').innerHTML = html;
-
-  document.querySelectorAll('.card[data-id]').forEach(card => {
-    const send = card.querySelector('.send');
-    if (!send) return;
-    const id = card.dataset.id;
-    const status = card.querySelector('.status:last-child');
-    const fileInput = card.querySelector('.f');
-    fileInput.onchange = () => { status.textContent = fileInput.files[0] ? 'Ready: ' + fileInput.files[0].name : ''; };
-    send.onclick = async () => {
-      const fd = new FormData();
-      fd.append('item_id', id);
-      fd.append('answer', card.querySelector('.a').value);
-      if (fileInput.files[0]) fd.append('file', fileInput.files[0]);
-      send.disabled = true; status.textContent = 'Uploading...';
-      try {
-        await api('submit', { method: 'POST', body: fd });
-        await load();
-      } catch (e) { status.textContent = e.message; status.className = 'status err'; send.disabled = false; }
-    };
-  });
+  updateSummary();
+  document.querySelectorAll('.card[data-id]').forEach(bindCard);
 }
 
 async function renderBoard() {

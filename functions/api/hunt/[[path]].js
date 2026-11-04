@@ -134,9 +134,6 @@ async function submit(request, env) {
     await env.MEDIA.put(mediaKey, file.stream(), { httpMetadata: { contentType: type } });
   }
 
-  const old = await env.DB.prepare('SELECT media_key FROM hunt_submissions WHERE team_id = ? AND item_id = ?')
-    .bind(team.id, itemId).first();
-
   await env.DB.prepare(
     `INSERT INTO hunt_submissions (team_id, item_id, media_key, media_type, answer)
      VALUES (?, ?, ?, ?, ?)
@@ -148,8 +145,11 @@ async function submit(request, env) {
        created_at = CURRENT_TIMESTAMP`
   ).bind(team.id, itemId, mediaKey, mediaType, answer).run();
 
-  if (mediaKey && old && old.media_key && env.MEDIA) await env.MEDIA.delete(old.media_key);
-  return json({ ok: true });
+  // Replaced photos are kept in storage (not deleted) so nothing is ever lost by accident.
+  const submission = await env.DB.prepare(
+    'SELECT item_id, media_key, media_type, answer, points FROM hunt_submissions WHERE team_id = ? AND item_id = ?'
+  ).bind(team.id, itemId).first();
+  return json({ ok: true, submission });
 }
 
 // Media is served to teams (code) or judges (admin key) via ?c= / ?k= since <img> can't send headers.
