@@ -64,7 +64,7 @@ export async function onRequestPost(context) {
   let sent = 0, failed = 0;
   const errors = [];
 
-  // Sequential to respect Resend rate limits
+  // Sequential to respect Brevo rate limits
   for (const a of results) {
     const editToken = tokenByGroup.get(a.registration_group_id);
     const vars = buildTemplateVars({ attendee: a, event, baseUrl, editToken });

@@ -57,8 +57,8 @@ export default function AttendeesTab({ showToast, onDataChange }) {
       });
       const data = await r.json();
       if (r.ok && data.ok) showToast('Confirmation email sent');
-      else showToast(data.error || 'Failed to send', 'error');
-    } catch { showToast('Failed to send', 'error'); }
+      else showToast(`Email not sent (Brevo): ${data.error || 'unknown error'} — see Email tab → Email status`, 'error');
+    } catch { showToast('Email not sent — could not reach the server', 'error'); }
   };
 
   const checkIn = async (ticket_id) => {
@@ -217,7 +217,7 @@ export default function AttendeesTab({ showToast, onDataChange }) {
                       {!a.cancelled ? (
                         <>
                           <button onClick={() => setEdit(a)} className="text-gray-500 hover:text-gray-800">Edit</button>
-                          <button onClick={() => resend(a.id)} className="text-gray-500 hover:text-gray-800">Resend</button>
+                          <button onClick={() => resend(a.id)} className="text-gray-500 hover:text-gray-800" title="Re-send this person's confirmation email">Resend email</button>
                           <button onClick={() => cancel(a.id)} className="text-amber-600 hover:text-amber-800">Cancel</button>
                           <button onClick={() => remove(a.id)} className="text-red-500 hover:text-red-700">Delete</button>
                         </>
